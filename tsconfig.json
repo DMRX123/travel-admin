@@ -29,6 +29,6 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-  ],
+, "components/Table.js", "pages/driver/dashboard.js", "pages/route/[from]-to-[to].js"  ],
   "exclude": ["node_modules"]
 }

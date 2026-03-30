@@ -1,0 +1,21 @@
+# *
+User-agent: *
+Allow: /
+
+# *
+User-agent: *
+Disallow: /dashboard
+
+# *
+User-agent: *
+Disallow: /login
+
+# *
+User-agent: *
+Disallow: /api
+
+# Host
+Host: https://maasaraswatitravels.com
+
+# Sitemaps
+Sitemap: https://maasaraswatitravels.com/sitemap.xml
