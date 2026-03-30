@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import Head from 'next/head';
 import { supabase } from '../lib/supabase';
 import '../styles/globals.css';
 import { Toaster } from 'react-hot-toast';
@@ -11,15 +12,8 @@ function MyApp({ Component, pageProps }) {
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-
-      // ✅ FIX: mark variables as used (no logic change)
-      if (router && session !== undefined) {
-        // no-op (just to avoid unused warning)
-      }
-
       setLoading(false);
     };
-
     checkSession();
   }, [router]);
 
@@ -36,6 +30,9 @@ function MyApp({ Component, pageProps }) {
 
   return (
     <>
+      <Head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      </Head>
       <Toaster position="top-right" />
       <Component {...pageProps} />
     </>

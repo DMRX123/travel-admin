@@ -6,7 +6,7 @@ export default function Document() {
       <Head>
         {/* Primary Meta Tags */}
         <meta charSet="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        {/* REMOVE viewport from here */}
         <meta name="author" content="Maa Saraswati Travels" />
         <meta name="robots" content="index, follow" />
         

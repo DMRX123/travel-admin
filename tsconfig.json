@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -11,7 +15,7 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "react-jsx",
+    "jsx": "preserve",
     "incremental": true,
     "plugins": [
       {
@@ -19,7 +23,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": [
+        "./*"
+      ]
     }
   },
   "include": [
@@ -28,7 +34,20 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "**/*.mts"
-, "components/Table.js", "pages/driver/dashboard.js", "pages/route/[from]-to-[to].js"  ],
-  "exclude": ["node_modules"]
+    "**/*.mts",
+    "components/Table.js",
+    "pages/driver/dashboard.js",
+    "pages/route/[from]-to-[to].js",
+    "components/PaymentModal.js",
+    "components/Vehicle3D.js",
+    "components/VehicleTracker.js",
+    "context/LanguageContext.js",
+    "lib/firebase.js",
+    "components/LanguageSwitcher.js",
+    "components/AnimatedBackground.js",
+    "context/NotificationContext.js"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }
