@@ -18,12 +18,9 @@
     "@supabase/ssr": "^0.1.0",
     "@supabase/supabase-js": "^2.39.0",
     "axios": "^1.6.2",
-    "csurf": "^1.11.0",
     "date-fns": "^2.30.0",
-    "express-rate-limit": "^7.1.5",
     "firebase": "^10.7.2",
     "framer-motion": "^10.16.16",
-    "helmet": "^7.1.0",
     "next": "14.0.4",
     "next-sitemap": "^4.2.3",
     "nodemailer": "^6.9.7",
@@ -36,7 +33,6 @@
     "recharts": "^2.10.3",
     "swr": "^2.4.1",
     "three": "^0.128.0",
-    "twilio": "^4.19.3",
     "use-places-autocomplete": "^4.0.1"
   },
   "devDependencies": {
