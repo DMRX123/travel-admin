@@ -42,11 +42,17 @@ export default function Login() {
 
       if (error) throw error;
 
-      const { data: profile } = await supabase
+      console.log('User ID:', data.user.id);
+      console.log('User Email:', data.user.email);
+
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('user_type')
         .eq('id', data.user.id)
         .single();
+
+      console.log('Profile:', profile);
+      console.log('Profile Error:', profileError);
 
       if (!profile || profile.user_type !== 'admin') {
         await supabase.auth.signOut();
@@ -56,6 +62,7 @@ export default function Login() {
       toast.success('Welcome back, Admin!');
       router.replace('/dashboard');
     } catch (err) {
+      console.log('Login Error:', err.message);
       setError(err.message);
       toast.error(err.message);
     } finally {
@@ -89,7 +96,7 @@ export default function Login() {
                 type="email"
                 required
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                placeholder="admin@maasaraswatitravels.com"
+                placeholder="admin@travelapp.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
