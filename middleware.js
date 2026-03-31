@@ -122,12 +122,12 @@ export async function middleware(req) {
     }
   }
 
-  // ✅ FIX: Allow access if session exists, otherwise redirect
+  // ✅ Allow access if public path
   if (isPublicPath) {
     return res;
   }
 
-  // ✅ FIX: If accessing admin/driver path without session, redirect to login
+  // ✅ If accessing admin/driver path without session, redirect to login
   if ((isAdminPath || isDriverPath) && !session) {
     if (isAdminPath) {
       return NextResponse.redirect(new URL('/login', req.url));
@@ -137,12 +137,12 @@ export async function middleware(req) {
     }
   }
 
-  // ✅ FIX: If logged in and trying to access login page, redirect to dashboard
+  // ✅ If logged in and trying to access login page, redirect to dashboard
   if (session && req.nextUrl.pathname === '/login') {
     return NextResponse.redirect(new URL('/dashboard', req.url));
   }
 
-  // ✅ FIX: For admin paths, verify admin user type
+  // ✅ For admin paths, verify admin user type
   if (isAdminPath && session) {
     const { data: profile } = await supabase
       .from('profiles')
@@ -156,7 +156,7 @@ export async function middleware(req) {
     }
   }
 
-  // ✅ FIX: For driver paths, verify driver user type
+  // ✅ For driver paths, verify driver user type
   if (isDriverPath && session) {
     const { data: profile } = await supabase
       .from('profiles')

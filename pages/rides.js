@@ -41,9 +41,9 @@ export default function Rides() {
       .from('rides')
       .update({ status: newStatus })
       .eq('id', rideId);
-    
+
     if (!error) {
-      const fetchRides = async () => {
+      const refreshRides = async () => {
         let query = supabase
           .from('rides')
           .select(`
@@ -60,7 +60,7 @@ export default function Rides() {
         const { data } = await query;
         setRides(data || []);
       };
-      await fetchRides();
+      await refreshRides();
       setShowModal(false);
       setToast({ message: `Ride status updated to ${newStatus}`, type: 'success' });
       setTimeout(() => setToast(null), 3000);
