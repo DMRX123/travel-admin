@@ -1,24 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-declare global {
-  interface Window {
-    Razorpay: any;
-  }
-}
-
-interface PaymentModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  amount: number;
-  bookingId: string;
-  customerName: string;
-  customerEmail: string;
-  customerPhone: string;
-  onSuccess: (paymentId: string) => void;
-  onFailure: (error: any) => void;
-}
-
 export default function PaymentModal({
   isOpen,
   onClose,
@@ -29,11 +11,11 @@ export default function PaymentModal({
   customerPhone,
   onSuccess,
   onFailure
-}: PaymentModalProps) {
+}) {
   const [loading, setLoading] = useState(false);
-  const [selectedMethod, setSelectedMethod] = useState<'card' | 'upi' | 'netbanking'>('card');
+  const [selectedMethod, setSelectedMethod] = useState('card');
 
-  const loadRazorpayScript = (): Promise<boolean> => {
+  const loadRazorpayScript = () => {
     return new Promise((resolve) => {
       if (window.Razorpay) {
         resolve(true);
@@ -65,7 +47,7 @@ export default function PaymentModal({
       description: `Booking #${bookingId}`,
       image: '/logo.png',
       order_id: bookingId,
-      handler: function (response: any) {
+      handler: function (response) {
         onSuccess(response.razorpay_payment_id);
         onClose();
       },
@@ -125,7 +107,7 @@ export default function PaymentModal({
               {paymentMethods.map((method) => (
                 <button
                   key={method.id}
-                  onClick={() => setSelectedMethod(method.id as any)}
+                  onClick={() => setSelectedMethod(method.id)}
                   className={`w-full p-4 rounded-xl border transition-all flex items-center gap-3 ${
                     selectedMethod === method.id
                       ? 'border-orange-500 bg-orange-500/20'
