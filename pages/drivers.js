@@ -30,7 +30,6 @@ export default function Drivers() {
     setLoading(false);
   };
 
-  // Fixed: Using IIFE to avoid set-state-in-effect warning
   useEffect(() => {
     const loadDrivers = async () => {
       await fetchDrivers();
@@ -94,7 +93,7 @@ export default function Drivers() {
     return (
       <Layout>
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
         </div>
       </Layout>
     );
@@ -109,7 +108,7 @@ export default function Drivers() {
           <h1 className="text-3xl font-bold">Driver Management</h1>
           <button
             onClick={fetchDrivers}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
           >
             Refresh
           </button>
@@ -123,7 +122,7 @@ export default function Drivers() {
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center">
-                      <div className="h-12 w-12 rounded-full bg-blue-500 flex items-center justify-center text-white text-lg font-bold">
+                      <div className="h-12 w-12 rounded-full bg-orange-500 flex items-center justify-center text-white text-lg font-bold">
                         {driver.profile?.full_name?.charAt(0).toUpperCase() || 'D'}
                       </div>
                       <div className="ml-3">

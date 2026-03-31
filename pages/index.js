@@ -8,7 +8,6 @@ import PlacesAutocomplete from '../components/PlacesAutocomplete';
 
 const libraries = ["places"];
 
-// Vehicle rates (per km)
 const vehicleRates = {
   auto: 10,
   sedan: 15,
@@ -17,7 +16,6 @@ const vehicleRates = {
   tempo: 25,
 };
 
-// MP Tourism Destinations with Coordinates
 const mpDestinations = [
   { name: "Ujjain Mahakaleshwar", city: "Ujjain", slug: "ujjain-mahakaleshwar", type: "Jyotirlinga", icon: "🕉️", lat: 23.1798, lng: 75.7883, color: "from-orange-500 to-red-500" },
   { name: "Omkareshwar", city: "Khandwa", slug: "omkareshwar", type: "Jyotirlinga", icon: "🕉️", lat: 22.2453, lng: 76.1511, color: "from-purple-500 to-pink-500" },
@@ -27,7 +25,6 @@ const mpDestinations = [
   { name: "Pachmarhi", city: "Hoshangabad", slug: "pachmarhi", type: "Hill Station", icon: "⛰️", lat: 22.4684, lng: 78.4346, color: "from-teal-500 to-green-500" },
 ];
 
-// Popular Routes
 const popularRoutes = [
   { from: "Indore", to: "Ujjain", price: "₹850", distance: "55 km", time: "1.5 hours" },
   { from: "Indore", to: "Omkareshwar", price: "₹1,150", distance: "77 km", time: "2 hours" },
@@ -54,7 +51,6 @@ export default function HomePage() {
   const [directionsService, setDirectionsService] = useState(null);
   const [directionsRenderer, setDirectionsRenderer] = useState(null);
   const [map, setMap] = useState(null);
-  const [mapContainer, setMapContainer] = useState(null);
 
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
@@ -144,7 +140,6 @@ export default function HomePage() {
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-        {/* Header */}
         <header className="bg-white/10 backdrop-blur-xl sticky top-0 z-50 border-b border-white/10">
           <div className="container mx-auto px-4 py-4 flex flex-wrap justify-between items-center">
             <div className="flex items-center gap-2">
@@ -161,7 +156,6 @@ export default function HomePage() {
           </div>
         </header>
 
-        {/* Hero Section */}
         <section className="container mx-auto px-4 py-8 md:py-12">
           <div className="max-w-6xl mx-auto">
             <motion.div
@@ -176,7 +170,6 @@ export default function HomePage() {
             </motion.div>
 
             <div className="grid lg:grid-cols-2 gap-8">
-              {/* Booking Form */}
               <motion.div
                 initial={{ opacity: 0, x: -30 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -258,7 +251,6 @@ export default function HomePage() {
                 )}
               </motion.div>
 
-              {/* Map Preview */}
               <motion.div
                 initial={{ opacity: 0, x: 30 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -275,21 +267,9 @@ export default function HomePage() {
                           { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
                           { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
                           { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-                          {
-                            featureType: "administrative.locality",
-                            elementType: "labels.text.fill",
-                            stylers: [{ color: "#d59563" }],
-                          },
-                          {
-                            featureType: "poi",
-                            elementType: "labels.text.fill",
-                            stylers: [{ color: "#d59563" }],
-                          },
-                          {
-                            featureType: "road",
-                            elementType: "geometry",
-                            stylers: [{ color: "#38414e" }],
-                          },
+                          { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
+                          { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
+                          { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
                         ],
                       });
                       setMap(newMap);
@@ -302,7 +282,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* MP Tourism Destinations */}
         <section className="py-16 bg-white/5">
           <div className="container mx-auto px-4">
             <motion.h2 
@@ -335,7 +314,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Popular Routes */}
         <section className="py-16">
           <div className="container mx-auto px-4">
             <motion.h2 
@@ -374,7 +352,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Features Section */}
         <section className="py-16 bg-white/5">
           <div className="container mx-auto px-4">
             <motion.h2 
@@ -412,7 +389,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Testimonials */}
         <section className="py-16">
           <div className="container mx-auto px-4">
             <motion.h2 
@@ -435,9 +411,7 @@ export default function HomePage() {
                   transition={{ delay: i * 0.1 }}
                   className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 hover:bg-white/20 transition-all"
                 >
-                  <div className="flex text-yellow-500 mb-3">
-                    {'★'.repeat(testimonial.rating)}{'☆'.repeat(5 - testimonial.rating)}
-                  </div>
+                  <div className="flex text-yellow-500 mb-3">{'★'.repeat(testimonial.rating)}{'☆'.repeat(5 - testimonial.rating)}</div>
                   <p className="text-white/80 mb-4">"{testimonial.text}"</p>
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-r from-orange-500 to-red-500 flex items-center justify-center text-white font-bold">
@@ -454,7 +428,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* CTA Section */}
         <section className="py-16 bg-gradient-to-r from-orange-600 to-red-600">
           <div className="container mx-auto px-4 text-center">
             <motion.h2 
@@ -469,25 +442,18 @@ export default function HomePage() {
               <a href="tel:+919876543210" className="bg-white text-orange-600 px-8 py-3 rounded-full font-semibold hover:shadow-xl transition-all">
                 📞 Call Now: +91 98765 43210
               </a>
-              <button
-                onClick={() => router.push('/book')}
-                className="bg-transparent border-2 border-white text-white px-8 py-3 rounded-full font-semibold hover:bg-white/10 transition-all"
-              >
+              <button onClick={() => router.push('/book')} className="bg-transparent border-2 border-white text-white px-8 py-3 rounded-full font-semibold hover:bg-white/10 transition-all">
                 Book Online →
               </button>
             </div>
           </div>
         </section>
 
-        {/* Footer */}
         <footer className="bg-slate-900 py-12 border-t border-white/10">
           <div className="container mx-auto px-4">
             <div className="grid md:grid-cols-4 gap-8">
               <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-2xl">🚐</span>
-                  <h3 className="text-xl font-bold text-white">Maa Saraswati Travels</h3>
-                </div>
+                <div className="flex items-center gap-2 mb-4"><span className="text-2xl">🚐</span><h3 className="text-xl font-bold text-white">Maa Saraswati Travels</h3></div>
                 <p className="text-gray-400 text-sm">Your trusted travel partner since 2015. MP Tourism Partner.</p>
               </div>
               <div>

@@ -12,7 +12,6 @@ export default function Rides() {
   const [showModal, setShowModal] = useState(false);
   const [toast, setToast] = useState(null);
 
-  // Fixed: Moved fetchRides inside useEffect to avoid set-state-in-effect warning
   useEffect(() => {
     const fetchRides = async () => {
       setLoading(true);
@@ -44,7 +43,6 @@ export default function Rides() {
       .eq('id', rideId);
     
     if (!error) {
-      // Re-fetch rides after update
       const fetchRides = async () => {
         let query = supabase
           .from('rides')
@@ -105,7 +103,7 @@ export default function Rides() {
     return (
       <Layout>
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
         </div>
       </Layout>
     );
@@ -122,7 +120,7 @@ export default function Rides() {
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
             >
               <option value="all">All Rides</option>
               <option value="pending">Pending</option>
@@ -132,7 +130,7 @@ export default function Rides() {
             </select>
             <button
               onClick={refreshRides}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+              className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
             >
               Refresh
             </button>
@@ -183,7 +181,7 @@ export default function Rides() {
                           setSelectedRide(ride);
                           setShowModal(true);
                         }}
-                        className="text-blue-600 hover:text-blue-900 text-sm"
+                        className="text-orange-600 hover:text-orange-900 text-sm"
                       >
                         View Details
                       </button>

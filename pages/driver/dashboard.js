@@ -193,20 +193,16 @@ export default function DriverDashboard() {
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Link href="/driver/earnings" className="bg-white rounded-xl shadow p-4 text-center hover:shadow-md transition">
-              <div className="text-3xl mb-2">💰</div>
-              <p className="font-semibold">Earnings</p>
+              <div className="text-3xl mb-2">💰</div><p className="font-semibold">Earnings</p>
             </Link>
             <Link href="/driver/history" className="bg-white rounded-xl shadow p-4 text-center hover:shadow-md transition">
-              <div className="text-3xl mb-2">📋</div>
-              <p className="font-semibold">Ride History</p>
+              <div className="text-3xl mb-2">📋</div><p className="font-semibold">Ride History</p>
             </Link>
             <Link href="/driver/profile" className="bg-white rounded-xl shadow p-4 text-center hover:shadow-md transition">
-              <div className="text-3xl mb-2">👤</div>
-              <p className="font-semibold">My Profile</p>
+              <div className="text-3xl mb-2">👤</div><p className="font-semibold">My Profile</p>
             </Link>
             <Link href="/driver/vehicle" className="bg-white rounded-xl shadow p-4 text-center hover:shadow-md transition">
-              <div className="text-3xl mb-2">🚐</div>
-              <p className="font-semibold">Vehicle Details</p>
+              <div className="text-3xl mb-2">🚐</div><p className="font-semibold">Vehicle Details</p>
             </Link>
           </div>
         </div>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import usePlacesAutocomplete, { getGeocode, getLatLng } from 'use-places-autocomplete';
 import { motion, AnimatePresence } from 'framer-motion';
+import usePlacesAutocomplete, { getGeocode, getLatLng } from 'use-places-autocomplete';
 
 export default function PlacesAutocomplete({ 
   placeholder, 

@@ -46,72 +46,93 @@ export default function Dashboard() {
     };
     
     const loadData = async () => {
-      const { count: users } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_type', 'user');
+      try {
+        // Users count
+        const { count: users } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_type', 'user');
 
-      const { count: drivers } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_type', 'driver');
+        // Drivers count
+        const { count: drivers } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_type', 'driver');
 
-      const { count: rides } = await supabase
-        .from('rides')
-        .select('*', { count: 'exact', head: true });
+        // Rides count
+        const { count: rides } = await supabase
+          .from('rides')
+          .select('*', { count: 'exact', head: true });
 
-      const { data: revenueData } = await supabase
-        .from('rides')
-        .select('fare')
-        .eq('payment_status', 'paid');
-      const totalRevenue = revenueData?.reduce((sum, r) => sum + r.fare, 0) || 0;
+        // Revenue
+        const { data: revenueData } = await supabase
+          .from('rides')
+          .select('fare')
+          .eq('payment_status', 'paid');
+        const totalRevenue = revenueData?.reduce((sum, r) => sum + (r.fare || 0), 0) || 0;
 
-      const { count: activeRides } = await supabase
-        .from('rides')
-        .select('*', { count: 'exact', head: true })
-        .in('status', ['pending', 'accepted', 'arrived', 'started']);
+        // Active rides
+        const { count: activeRides } = await supabase
+          .from('rides')
+          .select('*', { count: 'exact', head: true })
+          .in('status', ['pending', 'accepted', 'arrived', 'started']);
 
-      const { count: pendingDrivers } = await supabase
-        .from('drivers')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_approved', false);
+        // Pending drivers
+        const { count: pendingDrivers } = await supabase
+          .from('drivers')
+          .select('*', { count: 'exact', head: true })
+          .eq('is_approved', false);
 
-      const today = new Date().toISOString().split('T')[0];
-      const { count: todayBookings } = await supabase
-        .from('rides')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', today);
+        // Today's bookings
+        const today = new Date().toISOString().split('T')[0];
+        const { count: todayBookings } = await supabase
+          .from('rides')
+          .select('*', { count: 'exact', head: true })
+          .gte('created_at', today);
 
-      setStats({
-        totalUsers: users || 0,
-        totalDrivers: drivers || 0,
-        totalRides: rides || 0,
-        totalRevenue,
-        activeRides: activeRides || 0,
-        pendingDrivers: pendingDrivers || 0,
-        todayBookings: todayBookings || 0,
-      });
+        setStats({
+          totalUsers: users || 0,
+          totalDrivers: drivers || 0,
+          totalRides: rides || 0,
+          totalRevenue,
+          activeRides: activeRides || 0,
+          pendingDrivers: pendingDrivers || 0,
+          todayBookings: todayBookings || 0,
+        });
 
-      const { data: recentData } = await supabase
-        .from('rides')
-        .select('*, user:user_id(full_name, email), driver:driver_id(full_name)')
-        .order('created_at', { ascending: false })
-        .limit(10);
-      setRecentRides(recentData || []);
+        // Recent rides - FIXED QUERY
+        const { data: recentData } = await supabase
+          .from('rides')
+          .select(`
+            id,
+            fare,
+            status,
+            created_at,
+            pickup_address,
+            drop_address,
+            user:profiles!rides_user_id_fkey(full_name, email)
+          `)
+          .order('created_at', { ascending: false })
+          .limit(10);
+        setRecentRides(recentData || []);
 
-      const { data: dailyData } = await supabase
-        .from('rides')
-        .select('created_at, fare')
-        .gte('created_at', new Date(Date.now() - 30*24*60*60*1000).toISOString());
-      
-      const dailyMap = {};
-      dailyData?.forEach(ride => {
-        const date = new Date(ride.created_at).toLocaleDateString();
-        if (!dailyMap[date]) dailyMap[date] = { date, rides: 0, revenue: 0 };
-        dailyMap[date].rides++;
-        dailyMap[date].revenue += ride.fare;
-      });
-      setDailyStats(Object.values(dailyMap).reverse());
+        // Daily stats
+        const { data: dailyData } = await supabase
+          .from('rides')
+          .select('created_at, fare')
+          .gte('created_at', new Date(Date.now() - 30*24*60*60*1000).toISOString());
+        
+        const dailyMap = {};
+        dailyData?.forEach(ride => {
+          const date = new Date(ride.created_at).toLocaleDateString();
+          if (!dailyMap[date]) dailyMap[date] = { date, rides: 0, revenue: 0 };
+          dailyMap[date].rides++;
+          dailyMap[date].revenue += ride.fare || 0;
+        });
+        setDailyStats(Object.values(dailyMap).reverse());
+      } catch (error) {
+        console.error('Error loading data:', error);
+      }
     };
     
     checkAuthAndLoad();
@@ -171,14 +192,7 @@ export default function Dashboard() {
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ride ID</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Driver</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fare</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                  </tr>
+                  <tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ride ID</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Driver</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fare</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th></tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {recentRides.length === 0 ? (
@@ -186,12 +200,12 @@ export default function Dashboard() {
                   ) : (
                     recentRides.map((ride) => (
                       <tr key={ride.id} className="hover:bg-gray-50 cursor-pointer">
-                        <td className="px-6 py-4 text-sm font-mono">{ride.id.substring(0, 8)}...</td>
+                        <td className="px-6 py-4 text-sm font-mono">{ride.id?.substring(0, 8) || 'N/A'}...</td>
                         <td className="px-6 py-4 text-sm">{ride.user?.full_name || 'N/A'}</td>
-                        <td className="px-6 py-4 text-sm">{ride.driver?.full_name || 'Not assigned'}</td>
-                        <td className="px-6 py-4 text-sm font-medium">₹{ride.fare}</td>
-                        <td className="px-6 py-4"><span className={`px-2 py-1 text-xs rounded-full ${getStatusBadge(ride.status)}`}>{ride.status}</span></td>
-                        <td className="px-6 py-4 text-sm text-gray-500">{new Date(ride.created_at).toLocaleDateString()}</td>
+                        <td className="px-6 py-4 text-sm">Not assigned</td>
+                        <td className="px-6 py-4 text-sm font-medium">₹{ride.fare || 0}</td>
+                        <td className="px-6 py-4"><span className={`px-2 py-1 text-xs rounded-full ${getStatusBadge(ride.status)}`}>{ride.status || 'pending'}</span></td>
+                        <td className="px-6 py-4 text-sm text-gray-500">{ride.created_at ? new Date(ride.created_at).toLocaleDateString() : 'N/A'}</td>
                       </tr>
                     ))
                   )}

@@ -13,7 +13,6 @@ export default function Users() {
   const [showModal, setShowModal] = useState(false);
   const [toast, setToast] = useState(null);
 
-  // Fixed: Moved fetchUsers inside useEffect
   useEffect(() => {
     const fetchUsers = async () => {
       setLoading(true);
@@ -84,7 +83,7 @@ export default function Users() {
   const columns = [
     { header: 'User', key: 'full_name', render: (row) => (
       <div className="flex items-center">
-        <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
+        <div className="h-10 w-10 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold">
           {row.full_name?.charAt(0).toUpperCase() || 'U'}
         </div>
         <div className="ml-3">
@@ -132,13 +131,13 @@ export default function Users() {
             <input
               type="text"
               placeholder="Search users..."
-              className="px-4 py-2 border rounded-lg w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-4 py-2 border rounded-lg w-64 focus:outline-none focus:ring-2 focus:ring-orange-500"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             <button
               onClick={refreshUsers}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
             >
               Refresh
             </button>

@@ -9,7 +9,6 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const router = useRouter();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -35,8 +34,8 @@ export default function Login() {
         throw new Error('Unauthorized access. Admin only.');
       }
 
-      // Redirect to dashboard
-      router.push('/dashboard');
+      // ✅ HARD REDIRECT - Forces page reload
+      window.location.href = '/dashboard';
       
     } catch (err) {
       setError(err.message);
