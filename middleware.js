@@ -9,7 +9,7 @@ const rateLimitConfig = {
   max: 100, // limit each IP to 100 requests per windowMs
 };
 
-// Security Headers
+// Security Headers - FIXED for Google Fonts
 const securityHeaders = {
   'X-Frame-Options': 'DENY',
   'X-Content-Type-Options': 'nosniff',
@@ -19,9 +19,10 @@ const securityHeaders = {
   'Content-Security-Policy': `
     default-src 'self';
     script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://maps.googleapis.com;
-    style-src 'self' 'unsafe-inline';
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    font-src 'self' https://fonts.gstatic.com;
     img-src 'self' data: https:;
-    font-src 'self';
     connect-src 'self' https://*.supabase.co https://maps.googleapis.com https://checkout.razorpay.com https://*.firebaseio.com;
     frame-src https://checkout.razorpay.com;
   `.replace(/\s+/g, ' ').trim(),
@@ -73,12 +74,6 @@ export async function middleware(req) {
     );
   }
 
-  // CSRF Protection
-  const csrfToken = req.cookies.get('csrf-token');
-  if (req.method === 'POST' && !csrfToken) {
-    return new NextResponse('CSRF token missing', { status: 403 });
-  }
-
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -96,11 +91,9 @@ export async function middleware(req) {
     }
   );
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const { data: { session } } = await supabase.auth.getSession();
 
-  const publicPaths = ['/', '/login', '/book', '/api/public', '/about', '/contact', '/terms', '/privacy', '/tour', '/route'];
+  const publicPaths = ['/', '/login', '/book', '/about', '/contact', '/terms', '/privacy', '/tour', '/route'];
   const isPublicPath = publicPaths.some(
     (path) =>
       req.nextUrl.pathname === path ||
@@ -192,6 +185,5 @@ export const config = {
     '/contact',
     '/terms',
     '/privacy',
-    '/api/:path*',
   ],
 };

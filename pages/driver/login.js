@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../../lib/supabase';
 import Link from 'next/link';
 import Head from 'next/head';
-import toast from 'react-hot-toast';
 
 export default function DriverLogin() {
   const [email, setEmail] = useState('');
@@ -11,23 +10,6 @@ export default function DriverLogin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
-
-  useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('user_type')
-          .eq('id', session.user.id)
-          .single();
-        if (profile?.user_type === 'driver') {
-          router.replace('/driver/dashboard');
-        }
-      }
-    };
-    checkSession();
-  }, [router]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -42,22 +24,21 @@ export default function DriverLogin() {
 
       if (error) throw error;
 
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('user_type')
         .eq('id', data.user.id)
         .single();
 
-      if (!profile || profile.user_type !== 'driver') {
+      if (profileError || !profile || profile.user_type !== 'driver') {
         await supabase.auth.signOut();
         throw new Error('Invalid driver credentials');
       }
 
-      toast.success('Welcome driver!');
-      router.replace('/driver/dashboard');
+      router.push('/driver/dashboard');
+      
     } catch (err) {
       setError(err.message);
-      toast.error(err.message);
     } finally {
       setLoading(false);
     }
@@ -67,7 +48,6 @@ export default function DriverLogin() {
     <>
       <Head>
         <title>Driver Login | Maa Saraswati Travels</title>
-        <meta name="robots" content="noindex, nofollow" />
       </Head>
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-500 to-red-600">
         <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
@@ -90,7 +70,7 @@ export default function DriverLogin() {
                 type="email"
                 required
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                placeholder="driver@maasaraswatitravels.com"
+                placeholder="driver@travelapp.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
