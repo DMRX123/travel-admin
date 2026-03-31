@@ -5,6 +5,7 @@ import Layout from '../components/Layout';
 import StatsCard from '../components/StatsCard';
 import { LineChartComponent, BarChartComponent } from '../components/Chart';
 import Head from 'next/head';
+import toast from 'react-hot-toast';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -43,6 +44,30 @@ export default function Dashboard() {
       
       await loadData();
       setLoading(false);
+      
+      // Subscribe to real-time updates for rides
+      const subscription = supabase
+        .channel('admin-dashboard')
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'rides' },
+          () => {
+            loadData();
+            toast.info('Dashboard updated with new data');
+          }
+        )
+        .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'drivers' },
+          () => loadData()
+        )
+        .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'profiles' },
+          () => loadData()
+        )
+        .subscribe();
+      
+      return () => {
+        subscription.unsubscribe();
+      };
     };
     
     const loadData = async () => {
@@ -75,7 +100,7 @@ export default function Dashboard() {
         const { count: activeRides } = await supabase
           .from('rides')
           .select('*', { count: 'exact', head: true })
-          .in('status', ['pending', 'accepted', 'arrived', 'started']);
+          .in('status', ['pending', 'accepted', 'arrived', 'started', 'confirmed']);
 
         // Pending drivers
         const { count: pendingDrivers } = await supabase
@@ -100,7 +125,7 @@ export default function Dashboard() {
           todayBookings: todayBookings || 0,
         });
 
-        // Recent rides - FIXED QUERY
+        // Recent rides with user and driver details
         const { data: recentData } = await supabase
           .from('rides')
           .select(`
@@ -110,17 +135,20 @@ export default function Dashboard() {
             created_at,
             pickup_address,
             drop_address,
-            user:profiles!rides_user_id_fkey(full_name, email)
+            vehicle_type,
+            user:user_id (full_name, email, phone),
+            driver:driver_id (full_name, email, phone, vehicle_number)
           `)
           .order('created_at', { ascending: false })
           .limit(10);
         setRecentRides(recentData || []);
 
-        // Daily stats
+        // Daily stats for last 30 days
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
         const { data: dailyData } = await supabase
           .from('rides')
           .select('created_at, fare')
-          .gte('created_at', new Date(Date.now() - 30*24*60*60*1000).toISOString());
+          .gte('created_at', thirtyDaysAgo);
         
         const dailyMap = {};
         dailyData?.forEach(ride => {
@@ -132,6 +160,7 @@ export default function Dashboard() {
         setDailyStats(Object.values(dailyMap).reverse());
       } catch (error) {
         console.error('Error loading data:', error);
+        toast.error('Failed to load dashboard data');
       }
     };
     
@@ -146,6 +175,7 @@ export default function Dashboard() {
       started: 'bg-indigo-100 text-indigo-800',
       completed: 'bg-green-100 text-green-800',
       cancelled: 'bg-red-100 text-red-800',
+      confirmed: 'bg-teal-100 text-teal-800',
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
@@ -171,8 +201,8 @@ export default function Dashboard() {
           <h1 className="text-3xl font-bold mb-6 text-gray-800">Dashboard</h1>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4 mb-8">
-            <StatsCard title="Total Users" value={stats.totalUsers} icon="👥" color="orange" />
-            <StatsCard title="Total Drivers" value={stats.totalDrivers} icon="🚗" color="blue" />
+            <StatsCard title="Total Users" value={stats.totalUsers} icon="👥" color="blue" />
+            <StatsCard title="Total Drivers" value={stats.totalDrivers} icon="🚗" color="orange" />
             <StatsCard title="Total Rides" value={stats.totalRides} icon="🚕" color="purple" />
             <StatsCard title="Total Revenue" value={`₹${stats.totalRevenue.toFixed(2)}`} icon="💰" color="green" />
             <StatsCard title="Active Rides" value={stats.activeRides} icon="🔄" color="yellow" />
@@ -181,8 +211,8 @@ export default function Dashboard() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <LineChartComponent data={dailyStats} dataKey="revenue" xAxisKey="date" title="Revenue Trend (Last 30 Days)" />
-            <BarChartComponent data={dailyStats} dataKey="rides" xAxisKey="date" title="Ride Volume (Last 30 Days)" />
+            <LineChartComponent data={dailyStats} dataKey="revenue" xAxisKey="date" title="Revenue Trend (Last 30 Days)" color="#F97316" />
+            <BarChartComponent data={dailyStats} dataKey="rides" xAxisKey="date" title="Ride Volume (Last 30 Days)" color="#10B981" />
           </div>
 
           <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -192,20 +222,49 @@ export default function Dashboard() {
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
-                  <tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ride ID</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Driver</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fare</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th></tr>
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ride ID</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Driver</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vehicle</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fare</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                  </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {recentRides.length === 0 ? (
-                    <tr><td colSpan="6" className="px-6 py-8 text-center text-gray-500">No rides yet</td></tr>
+                    <tr>
+                      <td colSpan="7" className="px-6 py-8 text-center text-gray-500">No rides yet</td>
+                    </tr>
                   ) : (
                     recentRides.map((ride) => (
                       <tr key={ride.id} className="hover:bg-gray-50 cursor-pointer">
                         <td className="px-6 py-4 text-sm font-mono">{ride.id?.substring(0, 8) || 'N/A'}...</td>
-                        <td className="px-6 py-4 text-sm">{ride.user?.full_name || 'N/A'}</td>
-                        <td className="px-6 py-4 text-sm">Not assigned</td>
+                        <td className="px-6 py-4 text-sm">
+                          <div className="font-medium">{ride.user?.full_name || 'N/A'}</div>
+                          <div className="text-xs text-gray-500">{ride.user?.phone || ''}</div>
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          {ride.driver ? (
+                            <>
+                              <div>{ride.driver?.full_name || 'N/A'}</div>
+                              <div className="text-xs text-gray-500">{ride.driver?.vehicle_number || ''}</div>
+                            </>
+                          ) : (
+                            'Not assigned'
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-sm capitalize">{ride.vehicle_type || 'N/A'}</td>
                         <td className="px-6 py-4 text-sm font-medium">₹{ride.fare || 0}</td>
-                        <td className="px-6 py-4"><span className={`px-2 py-1 text-xs rounded-full ${getStatusBadge(ride.status)}`}>{ride.status || 'pending'}</span></td>
-                        <td className="px-6 py-4 text-sm text-gray-500">{ride.created_at ? new Date(ride.created_at).toLocaleDateString() : 'N/A'}</td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadge(ride.status)}`}>
+                            {ride.status || 'pending'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">
+                          {ride.created_at ? new Date(ride.created_at).toLocaleDateString() : 'N/A'}
+                        </td>
                       </tr>
                     ))
                   )}

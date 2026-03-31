@@ -4,10 +4,25 @@ import Head from 'next/head';
 import { supabase } from '../lib/supabase';
 import '../styles/globals.css';
 import { Toaster } from 'react-hot-toast';
+import { LanguageProvider } from '../context/LanguageContext';
+import { NotificationProvider } from '../context/NotificationContext';
+import ErrorBoundary from '../components/ErrorBoundary';
+import * as ga from '../lib/analytics';
 
 function MyApp({ Component, pageProps }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+
+  // Google Analytics
+  useEffect(() => {
+    const handleRouteChange = (url) => {
+      ga.pageview(url);
+    };
+    router.events.on('routeChangeComplete', handleRouteChange);
+    return () => {
+      router.events.off('routeChangeComplete', handleRouteChange);
+    };
+  }, [router.events]);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -29,13 +44,32 @@ function MyApp({ Component, pageProps }) {
   }
 
   return (
-    <>
-      <Head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      </Head>
-      <Toaster position="top-right" />
-      <Component {...pageProps} />
-    </>
+    <ErrorBoundary>
+      <LanguageProvider>
+        <NotificationProvider>
+          <Head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            {/* Google Analytics */}
+            <script
+              async
+              src={`https://www.googletagmanager.com/gtag/js?id=${ga.GA_TRACKING_ID}`}
+            />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){dataLayer.push(arguments);}
+                  gtag('js', new Date());
+                  gtag('config', '${ga.GA_TRACKING_ID}');
+                `,
+              }}
+            />
+          </Head>
+          <Toaster position="top-right" />
+          <Component {...pageProps} />
+        </NotificationProvider>
+      </LanguageProvider>
+    </ErrorBoundary>
   );
 }
 

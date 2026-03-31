@@ -5,6 +5,12 @@ import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
 import { useLoadScript } from '@react-google-maps/api';
 import PlacesAutocomplete from '../components/PlacesAutocomplete';
+import VehicleTracker from '../components/VehicleTracker';
+import LanguageSwitcher from '../components/LanguageSwitcher';
+import NotificationBell from '../components/NotificationBell';
+import { useLanguage } from '../context/LanguageContext';
+import { useNotifications } from '../context/NotificationContext';
+import toast from 'react-hot-toast';
 
 const libraries = ["places"];
 
@@ -23,6 +29,9 @@ const mpDestinations = [
   { name: "Bandhavgarh", city: "Umaria", slug: "bandhavgarh", type: "National Park", icon: "🐅", lat: 23.6898, lng: 80.9624, color: "from-green-500 to-emerald-500" },
   { name: "Sanchi Stupa", city: "Raisen", slug: "sanchi-stupa", type: "Buddhist Site", icon: "🕊️", lat: 23.4794, lng: 77.7396, color: "from-blue-500 to-cyan-500" },
   { name: "Pachmarhi", city: "Hoshangabad", slug: "pachmarhi", type: "Hill Station", icon: "⛰️", lat: 22.4684, lng: 78.4346, color: "from-teal-500 to-green-500" },
+  { name: "Ayodhya", city: "Ayodhya", slug: "ayodhya", type: "Temple", icon: "🛕", lat: 26.8015, lng: 82.2022, color: "from-red-500 to-orange-500" },
+  { name: "Varanasi", city: "Varanasi", slug: "kashi", type: "Spiritual", icon: "🕉️", lat: 25.3176, lng: 82.9739, color: "from-yellow-500 to-orange-500" },
+  { name: "Mathura-Vrindavan", city: "Mathura", slug: "mathura-vrindavan", type: "Pilgrimage", icon: "🙏", lat: 27.4924, lng: 77.6737, color: "from-blue-500 to-indigo-500" },
 ];
 
 const popularRoutes = [
@@ -34,10 +43,16 @@ const popularRoutes = [
   { from: "Bhopal", to: "Ujjain", price: "₹2,850", distance: "190 km", time: "4 hours" },
   { from: "Delhi", to: "Jaipur", price: "₹2,500", distance: "280 km", time: "5 hours" },
   { from: "Mumbai", to: "Pune", price: "₹1,800", distance: "150 km", time: "2.5 hours" },
+  { from: "Delhi", to: "Agra", price: "₹2,000", distance: "230 km", time: "3.5 hours" },
+  { from: "Ahmedabad", to: "Statue of Unity", price: "₹2,200", distance: "200 km", time: "3.5 hours" },
+  { from: "Pune", to: "Mahabaleshwar", price: "₹1,800", distance: "120 km", time: "2.5 hours" },
+  { from: "Mumbai", to: "Shirdi", price: "₹3,600", distance: "240 km", time: "4.5 hours" },
 ];
 
 export default function HomePage() {
   const router = useRouter();
+  const { t, language } = useLanguage();
+  const { unreadCount } = useNotifications();
   const [pickup, setPickup] = useState('');
   const [drop, setDrop] = useState('');
   const [pickupCoords, setPickupCoords] = useState(null);
@@ -51,6 +66,7 @@ export default function HomePage() {
   const [directionsService, setDirectionsService] = useState(null);
   const [directionsRenderer, setDirectionsRenderer] = useState(null);
   const [map, setMap] = useState(null);
+  const [showVehicleTracker, setShowVehicleTracker] = useState(false);
 
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
@@ -72,7 +88,7 @@ export default function HomePage() {
 
   const calculateDistanceAndFare = async () => {
     if (!pickupCoords || !dropCoords || !directionsService) {
-      alert('Please select valid pickup and drop locations from suggestions');
+      toast.error('Please select valid pickup and drop locations from suggestions');
       return;
     }
 
@@ -107,9 +123,11 @@ export default function HomePage() {
         if (map && result.routes[0].bounds) {
           map.fitBounds(result.routes[0].bounds);
         }
+        
+        toast.success(`Fare calculated: ₹${calculatedFare.toFixed(2)}`);
       } else {
         console.error('Directions request failed due to ' + status);
-        alert('Could not calculate route. Please check locations.');
+        toast.error('Could not calculate route. Please check locations.');
       }
       setCalculating(false);
     });
@@ -117,14 +135,18 @@ export default function HomePage() {
 
   const handleSearch = () => {
     if (!pickup || !drop) {
-      alert('Please enter pickup and drop locations');
+      toast.error('Please enter pickup and drop locations');
       return;
     }
     if (!fare || fare === 0) {
-      alert('Please calculate fare first');
+      toast.error('Please calculate fare first');
       return;
     }
     router.push(`/book?pickup=${encodeURIComponent(pickup)}&drop=${encodeURIComponent(drop)}&vehicle=${vehicle}&distance=${distance}&fare=${fare}`);
+  };
+
+  const handleCreateTrip = () => {
+    router.push('/trip/create');
   };
 
   if (loadError) return <div className="min-h-screen flex items-center justify-center text-white bg-slate-900">Error loading maps. Please check your API key.</div>;
@@ -133,10 +155,45 @@ export default function HomePage() {
   return (
     <>
       <Head>
-        <title>Maa Saraswati Travels - Best Taxi Service in Madhya Pradesh</title>
-        <meta name="description" content="Book taxi for Ujjain Mahakaleshwar, Omkareshwar, Khajuraho. Real-time fare, GPS tracking, professional drivers. Book now!" />
-        <meta name="keywords" content="MP Tourism, Ujjain taxi, Omkareshwar taxi, Khajuraho taxi, Bandhavgarh taxi, Mahakaleshwar darshan" />
+        <title>Maa Saraswati Travels - Best Taxi Service in India | Book Cab Online</title>
+        <meta name="description" content="Book taxi for Ujjain Mahakaleshwar, Omkareshwar, Khajuraho, Ayodhya, Varanasi. Real-time fare, GPS tracking, professional drivers. 24/7 service. Book now!" />
+        <meta name="keywords" content="MP Tourism, Ujjain taxi, Omkareshwar taxi, Khajuraho taxi, Bandhavgarh taxi, Mahakaleshwar darshan, Ayodhya taxi, Varanasi taxi, taxi booking app" />
+        <meta name="author" content="Maa Saraswati Travels" />
+        <meta name="geo.region" content="IN" />
+        <meta name="geo.placename" content="India" />
         <link rel="canonical" href="https://maasaraswatitravels.com" />
+        
+        {/* JSON-LD Structured Data */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "LocalBusiness",
+              "name": "Maa Saraswati Travels",
+              "image": "https://maasaraswatitravels.com/logo.png",
+              "description": "Best taxi service in India. Book cabs for Ujjain, Omkareshwar, Khajuraho, Ayodhya, Varanasi and more.",
+              "address": {
+                "@type": "PostalAddress",
+                "addressLocality": "Indore",
+                "addressRegion": "Madhya Pradesh",
+                "addressCountry": "IN"
+              },
+              "geo": {
+                "@type": "GeoCoordinates",
+                "latitude": "22.7196",
+                "longitude": "75.8577"
+              },
+              "openingHours": "Mo-Su 00:00-23:59",
+              "telephone": "+919876543210",
+              "priceRange": "₹₹",
+              "sameAs": [
+                "https://www.facebook.com/maasaraswatitravels",
+                "https://www.instagram.com/maasaraswatitravels"
+              ]
+            })
+          }}
+        />
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -148,8 +205,13 @@ export default function HomePage() {
                 Maa Saraswati Travels
               </h1>
             </div>
-            <div className="flex gap-4">
-              <a href="tel:+919876543210" className="bg-orange-500 text-white px-4 py-2 rounded-full hover:bg-orange-600 transition shadow-lg hover:shadow-xl">
+            <div className="flex items-center gap-3">
+              <Link href="/trip/create" className="bg-purple-500 text-white px-4 py-2 rounded-full hover:bg-purple-600 transition shadow-lg text-sm font-medium flex items-center gap-1">
+                ✨ Create Trip
+              </Link>
+              <NotificationBell />
+              <LanguageSwitcher />
+              <a href="tel:+919876543210" className="bg-orange-500 text-white px-4 py-2 rounded-full hover:bg-orange-600 transition shadow-lg text-sm font-medium flex items-center gap-1">
                 📞 24/7 Support
               </a>
             </div>
@@ -289,7 +351,7 @@ export default function HomePage() {
               whileInView={{ opacity: 1, y: 0 }}
               className="text-3xl md:text-4xl font-bold text-center text-white mb-12"
             >
-              Explore Madhya Pradesh
+              Explore Sacred India
             </motion.h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {mpDestinations.map((dest, i) => (
@@ -403,6 +465,9 @@ export default function HomePage() {
                 { name: 'Rahul Sharma', city: 'Indore', text: 'Excellent service for Mahakaleshwar darshan! Driver was punctual and very knowledgeable.', rating: 5, avatar: 'R' },
                 { name: 'Priya Patel', city: 'Bhopal', text: 'Best taxi service in MP. Booked for Khajuraho tour, everything was perfect.', rating: 5, avatar: 'P' },
                 { name: 'Amit Kumar', city: 'Ujjain', text: 'Very professional service. Clean cars, fair pricing. Highly recommend!', rating: 5, avatar: 'A' },
+                { name: 'Sneha Gupta', city: 'Delhi', text: 'Booked for Ayodhya trip. Driver was very friendly and helped with local info.', rating: 5, avatar: 'S' },
+                { name: 'Vikram Singh', city: 'Mumbai', text: 'Great experience! On-time pickup, comfortable car, reasonable rates.', rating: 5, avatar: 'V' },
+                { name: 'Neha Verma', city: 'Lucknow', text: 'The multi-stop trip feature is amazing! Planned my entire tour easily.', rating: 5, avatar: 'N' },
               ].map((testimonial, i) => (
                 <motion.div
                   key={i}
@@ -437,7 +502,7 @@ export default function HomePage() {
             >
               Ready for Your Journey?
             </motion.h2>
-            <p className="text-xl text-white/90 mb-8">Book your ride now and experience the best travel service in MP</p>
+            <p className="text-xl text-white/90 mb-8">Book your ride now and experience the best travel service in India</p>
             <div className="flex flex-wrap justify-center gap-4">
               <a href="tel:+919876543210" className="bg-white text-orange-600 px-8 py-3 rounded-full font-semibold hover:shadow-xl transition-all">
                 📞 Call Now: +91 98765 43210
@@ -454,15 +519,26 @@ export default function HomePage() {
             <div className="grid md:grid-cols-4 gap-8">
               <div>
                 <div className="flex items-center gap-2 mb-4"><span className="text-2xl">🚐</span><h3 className="text-xl font-bold text-white">Maa Saraswati Travels</h3></div>
-                <p className="text-gray-400 text-sm">Your trusted travel partner since 2015. MP Tourism Partner.</p>
+                <p className="text-gray-400 text-sm">Your trusted travel partner since 2015. India Tourism Partner.</p>
               </div>
               <div>
                 <h4 className="font-bold text-white mb-4">Quick Links</h4>
                 <ul className="space-y-2 text-gray-400 text-sm">
                   <li><Link href="/about" className="hover:text-white transition">About Us</Link></li>
-                  <li><Link href="/tour" className="hover:text-white transition">MP Tourism</Link></li>
+                  <li><Link href="/trip/create" className="hover:text-white transition">Create Trip</Link></li>
                   <li><Link href="/contact" className="hover:text-white transition">Contact</Link></li>
                   <li><Link href="/terms" className="hover:text-white transition">Terms & Conditions</Link></li>
+                  <li><Link href="/privacy" className="hover:text-white transition">Privacy Policy</Link></li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-bold text-white mb-4">Popular Destinations</h4>
+                <ul className="space-y-2 text-gray-400 text-sm">
+                  <li><Link href="/tour/ujjain-mahakaleshwar" className="hover:text-white transition">Ujjain Mahakaleshwar</Link></li>
+                  <li><Link href="/tour/omkareshwar" className="hover:text-white transition">Omkareshwar</Link></li>
+                  <li><Link href="/tour/khajuraho" className="hover:text-white transition">Khajuraho</Link></li>
+                  <li><Link href="/tour/ayodhya" className="hover:text-white transition">Ayodhya</Link></li>
+                  <li><Link href="/tour/kashi" className="hover:text-white transition">Varanasi</Link></li>
                 </ul>
               </div>
               <div>
@@ -473,12 +549,9 @@ export default function HomePage() {
                   <li>📍 Indore, Madhya Pradesh</li>
                   <li>🕐 24/7 - Always Open</li>
                 </ul>
-              </div>
-              <div>
-                <h4 className="font-bold text-white mb-4">Download App</h4>
-                <div className="flex gap-3">
-                  <button className="bg-white/10 text-white px-4 py-2 rounded-lg hover:bg-white/20 transition">📱 Google Play</button>
-                  <button className="bg-white/10 text-white px-4 py-2 rounded-lg hover:bg-white/20 transition">🍎 App Store</button>
+                <div className="flex gap-3 mt-4">
+                  <a href="#" className="bg-white/10 text-white px-3 py-2 rounded-lg hover:bg-white/20 transition">📱 Google Play</a>
+                  <a href="#" className="bg-white/10 text-white px-3 py-2 rounded-lg hover:bg-white/20 transition">🍎 App Store</a>
                 </div>
               </div>
             </div>

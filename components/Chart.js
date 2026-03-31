@@ -5,7 +5,7 @@ const CustomTooltip = ({ active, payload, label }) => {
     return (
       <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">
         <p className="font-semibold text-gray-700">{label}</p>
-        <p className="text-blue-600">
+        <p className="text-orange-600">
           {payload[0].name}: {payload[0].value}
         </p>
       </div>
@@ -14,7 +14,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-export function LineChartComponent({ data, dataKey, xAxisKey, title }) {
+export function LineChartComponent({ data, dataKey, xAxisKey, title, color = '#F97316' }) {
   if (!data || data.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
@@ -36,14 +36,14 @@ export function LineChartComponent({ data, dataKey, xAxisKey, title }) {
           <YAxis />
           <Tooltip content={<CustomTooltip />} />
           <Legend />
-          <Line type="monotone" dataKey={dataKey} stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} />
+          <Line type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2} dot={{ r: 4, fill: color }} />
         </LineChart>
       </ResponsiveContainer>
     </div>
   );
 }
 
-export function BarChartComponent({ data, dataKey, xAxisKey, title }) {
+export function BarChartComponent({ data, dataKey, xAxisKey, title, color = '#10B981' }) {
   if (!data || data.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
@@ -65,7 +65,7 @@ export function BarChartComponent({ data, dataKey, xAxisKey, title }) {
           <YAxis />
           <Tooltip content={<CustomTooltip />} />
           <Legend />
-          <Bar dataKey={dataKey} fill="#10b981" radius={[8, 8, 0, 0]} />
+          <Bar dataKey={dataKey} fill={color} radius={[8, 8, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>

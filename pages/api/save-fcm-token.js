@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase';
+import { supabaseAdmin } from '../../lib/supabase';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -12,19 +12,35 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Save token to database
-    const { error } = await supabase
+    // Check if token already exists
+    const { data: existing, error: findError } = await supabaseAdmin
       .from('fcm_tokens')
-      .upsert({
-        token,
-        user_id: userId || null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
+      .select('id')
+      .eq('token', token)
+      .single();
 
-    if (error) throw error;
+    if (existing) {
+      // Update existing token
+      await supabaseAdmin
+        .from('fcm_tokens')
+        .update({
+          user_id: userId || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existing.id);
+    } else {
+      // Insert new token
+      await supabaseAdmin
+        .from('fcm_tokens')
+        .insert({
+          token,
+          user_id: userId || null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+    }
 
-    res.status(200).json({ success: true });
+    res.status(200).json({ success: true, message: 'Token saved successfully' });
   } catch (error) {
     console.error('Error saving FCM token:', error);
     res.status(500).json({ error: 'Failed to save token' });

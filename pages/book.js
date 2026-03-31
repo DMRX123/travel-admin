@@ -2,78 +2,158 @@ import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
+import toast from 'react-hot-toast';
 
 export default function BookRide() {
   const router = useRouter();
-  const { pickup, drop, vehicle } = router.query;
+  const { pickup, drop, vehicle, distance, fare, tripType, days, stops } = router.query;
   const [isBooking, setIsBooking] = useState(false);
-  const [fare, setFare] = useState(0);
-  const [distance, setDistance] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
   const [verified, setVerified] = useState(false);
+  const [bookingId, setBookingId] = useState(null);
+  const [otpTimer, setOtpTimer] = useState(0);
+  const [resendDisabled, setResendDisabled] = useState(false);
 
   useEffect(() => {
-    const vehicleRates = {
-      auto: 10,
-      sedan: 15,
-      suv: 20,
-      luxury: 30,
-      tempo: 25,
-    };
+    // Load saved user data from localStorage
+    const savedName = localStorage.getItem('user_name');
+    const savedPhone = localStorage.getItem('user_phone');
+    if (savedName) setName(savedName);
+    if (savedPhone) setPhone(savedPhone);
+  }, []);
 
-    const calculateFare = () => {
-      if (pickup && drop) {
-        const simulatedDistance = Math.floor(Math.random() * 50) + 10;
-        setDistance(simulatedDistance);
+  useEffect(() => {
+    let timer;
+    if (otpTimer > 0) {
+      timer = setTimeout(() => setOtpTimer(otpTimer - 1), 1000);
+    } else {
+      setResendDisabled(false);
+    }
+    return () => clearTimeout(timer);
+  }, [otpTimer]);
 
-        const selectedVehicle = typeof vehicle === 'string' ? vehicle : 'sedan';
-
-        // ✅ FIXED (removed TypeScript assertion)
-        const rate = vehicleRates[selectedVehicle] || 15;
-
-        setFare(simulatedDistance * rate);
-      }
-    };
-
-    calculateFare();
-  }, [pickup, drop, vehicle]);
-
-  const handleSendOtp = () => {
+  const handleSendOtp = async () => {
     if (!name || !phone) {
-      alert('Please enter your name and phone number');
+      toast.error('Please enter your name and phone number');
       return;
     }
-    const generatedOtp = Math.floor(1000 + Math.random() * 9000).toString();
-    setOtp(generatedOtp);
-    setOtpSent(true);
-    alert(`OTP sent to ${phone}: ${generatedOtp}`);
+    
+    if (phone.length !== 10) {
+      toast.error('Please enter a valid 10-digit phone number');
+      return;
+    }
+
+    setResendDisabled(true);
+    setOtpTimer(60);
+    
+    try {
+      const response = await fetch('/api/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, name }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        setOtpSent(true);
+        toast.success(`OTP sent to ${phone}`);
+        // For demo: show OTP in console, in production remove this
+        console.log('OTP for testing:', data.otp);
+      } else {
+        toast.error(data.error || 'Failed to send OTP');
+        setResendDisabled(false);
+        setOtpTimer(0);
+      }
+    } catch (error) {
+      console.error('Send OTP error:', error);
+      toast.error('Network error. Please try again.');
+      setResendDisabled(false);
+      setOtpTimer(0);
+    }
   };
 
-  const handleVerifyOtp = () => {
-    if (otp === '1234') {
-      setVerified(true);
-      alert('Phone verified successfully!');
-    } else {
-      alert('Invalid OTP');
+  const handleVerifyOtp = async () => {
+    if (!otp || otp.length !== 6) {
+      toast.error('Please enter a valid 6-digit OTP');
+      return;
+    }
+    
+    try {
+      const response = await fetch('/api/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, otp }),
+      });
+      
+      if (response.ok) {
+        setVerified(true);
+        toast.success('Phone verified successfully!');
+        localStorage.setItem('user_name', name);
+        localStorage.setItem('user_phone', phone);
+      } else {
+        const data = await response.json();
+        toast.error(data.error || 'Invalid OTP');
+      }
+    } catch (error) {
+      console.error('Verify OTP error:', error);
+      toast.error('Network error. Please try again.');
+    }
+  };
+
+  const handleResendOtp = () => {
+    if (!resendDisabled) {
+      handleSendOtp();
     }
   };
 
   const handleBooking = async () => {
     if (!verified) {
-      alert('Please verify your phone number first');
+      toast.error('Please verify your phone number first');
       return;
     }
     
     setIsBooking(true);
-    setTimeout(() => {
+    
+    try {
+      const parsedStops = stops ? JSON.parse(stops) : [];
+      const response = await fetch('/api/book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pickup,
+          drop,
+          vehicle,
+          fare: parseFloat(fare),
+          distance: parseFloat(distance),
+          name,
+          phone,
+          paymentMethod,
+          tripType: tripType || 'oneway',
+          days: days ? parseInt(days) : 1,
+          stops: parsedStops,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        setBookingId(data.bookingId);
+        toast.success('Booking confirmed!');
+        router.push(`/booking-success?id=${data.bookingId}`);
+      } else {
+        toast.error(data.error || 'Booking failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Booking error:', error);
+      toast.error('Network error. Please try again.');
+    } finally {
       setIsBooking(false);
-      alert('Booking confirmed! Driver will contact you shortly.');
-      router.push('/booking-success');
-    }, 2000);
+    }
   };
 
   const getVehicleDisplayName = () => {
@@ -84,18 +164,27 @@ export default function BookRide() {
       luxury: 'Luxury',
       tempo: 'Tempo Traveller'
     };
-
     const selectedVehicle = typeof vehicle === 'string' ? vehicle : 'sedan';
-
-    // ✅ FIXED (removed TypeScript assertion)
     return vehicleMap[selectedVehicle] || 'Sedan';
   };
+
+  const parseStopsList = () => {
+    if (!stops) return [];
+    try {
+      return JSON.parse(stops);
+    } catch {
+      return [];
+    }
+  };
+
+  const stopsList = parseStopsList();
 
   return (
     <>
       <Head>
-        <title>Book Your Ride | Maa Saraswati Travels</title>
-        <meta name="description" content="Book your taxi ride instantly. Best prices, professional drivers, 24/7 service." />
+        <title>Confirm Booking | Maa Saraswati Travels</title>
+        <meta name="description" content="Confirm your taxi booking. Best prices, professional drivers, 24/7 service." />
+        <meta name="robots" content="noindex, nofollow" />
       </Head>
 
       <div className="min-h-screen bg-gray-50">
@@ -114,8 +203,17 @@ export default function BookRide() {
             <div className="space-y-4 mb-8 p-4 bg-orange-50 rounded-lg">
               <div className="flex justify-between"><span className="font-semibold">📍 Pickup:</span> <span>{pickup || 'Not specified'}</span></div>
               <div className="flex justify-between"><span className="font-semibold">📍 Drop:</span> <span>{drop || 'Not specified'}</span></div>
+              {stopsList.length > 0 && (
+                <div className="flex justify-between">
+                  <span className="font-semibold">🗺️ Stops:</span>
+                  <span>{stopsList.join(' → ')}</span>
+                </div>
+              )}
               <div className="flex justify-between"><span className="font-semibold">🚗 Vehicle:</span> <span>{getVehicleDisplayName()}</span></div>
               <div className="flex justify-between"><span className="font-semibold">📏 Distance:</span> <span>{distance} km</span></div>
+              {tripType === 'multiday' && (
+                <div className="flex justify-between"><span className="font-semibold">📅 Days:</span> <span>{days} days</span></div>
+              )}
               <div className="flex justify-between">
                 <span className="font-semibold text-2xl text-orange-600">💰 Total Fare:</span>
                 <span className="text-2xl font-bold text-orange-600">₹{fare}</span>
@@ -128,7 +226,7 @@ export default function BookRide() {
               <input
                 type="text"
                 placeholder="Full Name"
-                className="w-full p-3 border rounded-lg"
+                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-orange-500"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
@@ -137,30 +235,46 @@ export default function BookRide() {
                 <input
                   type="tel"
                   placeholder="Phone Number"
-                  className="flex-1 p-3 border rounded-lg"
+                  className="flex-1 p-3 border rounded-lg focus:ring-2 focus:ring-orange-500"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
+                  maxLength="10"
                 />
 
                 {!otpSent ? (
-                  <button onClick={handleSendOtp} className="bg-orange-500 text-white px-4 rounded-lg hover:bg-orange-600">
+                  <button 
+                    onClick={handleSendOtp} 
+                    disabled={resendDisabled}
+                    className="bg-orange-500 text-white px-4 rounded-lg hover:bg-orange-600 disabled:opacity-50"
+                  >
                     Send OTP
                   </button>
                 ) : !verified ? (
                   <div className="flex gap-2 flex-1">
                     <input
                       type="text"
-                      placeholder="OTP"
-                      className="w-24 p-3 border rounded-lg"
+                      placeholder="6-digit OTP"
+                      className="w-28 p-3 border rounded-lg text-center text-lg font-mono"
                       value={otp}
                       onChange={(e) => setOtp(e.target.value)}
+                      maxLength="6"
                     />
-                    <button onClick={handleVerifyOtp} className="bg-green-500 text-white px-4 rounded-lg hover:bg-green-600">
+                    <button 
+                      onClick={handleVerifyOtp} 
+                      className="bg-green-500 text-white px-4 rounded-lg hover:bg-green-600"
+                    >
                       Verify
+                    </button>
+                    <button 
+                      onClick={handleResendOtp} 
+                      disabled={resendDisabled}
+                      className="text-orange-500 text-sm hover:underline disabled:opacity-50"
+                    >
+                      {resendDisabled ? `Resend in ${otpTimer}s` : 'Resend'}
                     </button>
                   </div>
                 ) : (
-                  <span className="text-green-600 font-semibold p-3">✓ Verified</span>
+                  <span className="text-green-600 font-semibold p-3 flex items-center">✓ Verified</span>
                 )}
               </div>
 

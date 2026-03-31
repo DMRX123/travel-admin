@@ -5,12 +5,7 @@ const LanguageContext = createContext();
 const translations = {
   home: { en: 'Home', hi: 'होम' },
   bookRide: { en: 'Book Ride', hi: 'राइड बुक करें' },
-  pickupLocation: { en: 'Pickup Location', hi: 'पिकअप स्थान' },
-  dropLocation: { en: 'Drop Location', hi: 'ड्रॉप स्थान' },
-  calculateFare: { en: 'Calculate Fare', hi: 'किराया गणना करें' },
-  bookNow: { en: 'Book Now', hi: 'अभी बुक करें' },
-  totalFare: { en: 'Total Fare', hi: 'कुल किराया' },
-  callNow: { en: 'Call Now', hi: 'अभी कॉल करें' },
+  // ... add all translations
 };
 
 export function LanguageProvider({ children }) {
