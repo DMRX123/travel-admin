@@ -3,6 +3,9 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { supabase } from '../lib/supabase'; // Make sure this import path is correct for your project
+import ScheduledRideModal from '../components/ScheduledRideModal';
+import Wallet from '../components/Wallet';
 
 export default function BookRide() {
   const router = useRouter();
@@ -17,6 +20,9 @@ export default function BookRide() {
   const [bookingId, setBookingId] = useState(null);
   const [otpTimer, setOtpTimer] = useState(0);
   const [resendDisabled, setResendDisabled] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [useWallet, setUseWallet] = useState(false);
+  const [walletBalance, setWalletBalance] = useState(0);
 
   useEffect(() => {
     // Load saved user data from localStorage
@@ -35,6 +41,30 @@ export default function BookRide() {
     }
     return () => clearTimeout(timer);
   }, [otpTimer]);
+
+  // Add this useEffect to load wallet balance
+  useEffect(() => {
+    const loadWallet = async () => {
+      if (phone) {
+        // First get user by phone number
+        const { data: userData } = await supabase
+          .from('users')
+          .select('id')
+          .eq('phone', phone)
+          .single();
+        
+        if (userData) {
+          const { data } = await supabase
+            .from('wallets')
+            .select('balance')
+            .eq('user_id', userData.id)
+            .single();
+          if (data) setWalletBalance(data.balance);
+        }
+      }
+    };
+    loadWallet();
+  }, [phone]);
 
   const handleSendOtp = async () => {
     if (!name || !phone) {
@@ -121,6 +151,13 @@ export default function BookRide() {
     
     try {
       const parsedStops = stops ? JSON.parse(stops) : [];
+      
+      // If using wallet, deduct balance
+      let finalFare = parseFloat(fare);
+      if (useWallet && walletBalance > 0) {
+        finalFare = Math.max(0, finalFare - Math.min(finalFare, walletBalance));
+      }
+      
       const response = await fetch('/api/book', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -128,14 +165,16 @@ export default function BookRide() {
           pickup,
           drop,
           vehicle,
-          fare: parseFloat(fare),
+          fare: finalFare,
           distance: parseFloat(distance),
           name,
           phone,
-          paymentMethod,
+          paymentMethod: useWallet ? 'wallet' : paymentMethod,
           tripType: tripType || 'oneway',
           days: days ? parseInt(days) : 1,
           stops: parsedStops,
+          useWallet,
+          walletDeduction: useWallet ? Math.min(parseFloat(fare), walletBalance) : 0,
         }),
       });
       
@@ -302,6 +341,32 @@ export default function BookRide() {
                 ))}
               </div>
 
+              {/* Add after payment method selection, before confirm button */}
+              {verified && (
+                <div className="mt-4 p-4 bg-orange-50 rounded-lg">
+                  <Wallet userId={phone} />
+                  
+                  {walletBalance >= parseFloat(fare) && (
+                    <label className="flex items-center gap-2 mt-3">
+                      <input
+                        type="checkbox"
+                        checked={useWallet}
+                        onChange={(e) => setUseWallet(e.target.checked)}
+                        className="w-4 h-4 text-orange-500"
+                      />
+                      <span className="text-sm">Pay ₹{Math.min(parseFloat(fare), walletBalance)} from wallet</span>
+                    </label>
+                  )}
+                  
+                  <button
+                    onClick={() => setShowScheduleModal(true)}
+                    className="mt-3 text-orange-500 text-sm hover:underline"
+                  >
+                    📅 Schedule for later
+                  </button>
+                </div>
+              )}
+
               <button
                 onClick={handleBooking}
                 disabled={isBooking || !verified}
@@ -313,6 +378,17 @@ export default function BookRide() {
           </div>
         </div>
       </div>
+
+      {/* Add at bottom before closing div */}
+      <ScheduledRideModal
+        isOpen={showScheduleModal}
+        onClose={() => setShowScheduleModal(false)}
+        pickup={pickup}
+        drop={drop}
+        vehicle={vehicle}
+        fare={fare}
+        distance={distance}
+      />
     </>
   );
 }

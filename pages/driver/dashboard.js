@@ -94,12 +94,12 @@ export default function DriverDashboard() {
         .gte('completed_at', today);
       const todayTotal = todayRides?.reduce((sum, r) => sum + (r.fare || 0), 0) || 0;
 
-      // Get current ride
+      // Get current ride with rating
       const { data: current } = await supabase
         .from('rides')
         .select('*')
         .eq('driver_id', userId)
-        .in('status', ['accepted', 'arrived', 'started'])
+        .in('status', ['accepted', 'arrived', 'started', 'completed'])
         .single();
       
       setCurrentRide(current);
@@ -276,6 +276,18 @@ export default function DriverDashboard() {
                   <p><strong>📍 Drop:</strong> {currentRide.drop_address}</p>
                   <p><strong>💰 Fare:</strong> ₹{currentRide.fare}</p>
                   <p><strong>📏 Distance:</strong> {currentRide.distance} km</p>
+                  
+                  {/* Add after earnings section */}
+                  {currentRide?.rating && (
+                    <div className="mt-2 flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map(star => (
+                        <span key={star} className={star <= currentRide.rating ? 'text-yellow-400' : 'text-gray-300'}>
+                          ★
+                        </span>
+                      ))}
+                      <span className="text-sm text-gray-500 ml-2">({currentRide.rating})</span>
+                    </div>
+                  )}
                   
                   <div className="flex gap-3 mt-4">
                     {currentRide.status === 'accepted' && (

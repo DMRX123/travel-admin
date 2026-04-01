@@ -11,6 +11,9 @@ import NotificationBell from '../components/NotificationBell';
 import { useLanguage } from '../context/LanguageContext';
 import { useNotifications } from '../context/NotificationContext';
 import toast from 'react-hot-toast';
+import ReferralCard from '../components/ReferralCard';
+import LiveChat from '../components/LiveChat';
+import { supabase } from '../lib/supabase';
 
 const libraries = ["places"];
 
@@ -67,6 +70,8 @@ export default function HomePage() {
   const [directionsRenderer, setDirectionsRenderer] = useState(null);
   const [map, setMap] = useState(null);
   const [showVehicleTracker, setShowVehicleTracker] = useState(false);
+  const [userId, setUserId] = useState(null);
+  const [userName, setUserName] = useState('');
 
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
@@ -85,6 +90,30 @@ export default function HomePage() {
       directionsRenderer.setMap(map);
     }
   }, [map, directionsRenderer]);
+
+  // Add inside component after getting userId
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUserId(session.user.id);
+        
+        // Get user profile for name
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (profile?.full_name) {
+          setUserName(profile.full_name);
+        } else {
+          setUserName(session.user.email?.split('@')[0] || 'User');
+        }
+      }
+    };
+    getUser();
+  }, []);
 
   const calculateDistanceAndFare = async () => {
     if (!pickupCoords || !dropCoords || !directionsService) {
@@ -560,6 +589,16 @@ export default function HomePage() {
             </div>
           </div>
         </footer>
+
+        {/* Add after footer, before closing div */}
+        {userId && (
+          <>
+            <div className="fixed left-6 bottom-6 z-40 w-72">
+              <ReferralCard userId={userId} />
+            </div>
+            <LiveChat userId={userId} userName={userName} />
+          </>
+        )}
       </div>
     </>
   );
