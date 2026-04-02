@@ -2,228 +2,154 @@ import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { useLoadScript } from '@react-google-maps/api';
+import PlacesAutocomplete from '../components/PlacesAutocomplete';
 import toast from 'react-hot-toast';
-import { supabase } from '../lib/supabase'; // Make sure this import path is correct for your project
-import ScheduledRideModal from '../components/ScheduledRideModal';
-import Wallet from '../components/Wallet';
+
+const libraries = ["places"];
 
 export default function BookRide() {
   const router = useRouter();
-  const { pickup, drop, vehicle, distance, fare, tripType, days, stops } = router.query;
-  const [isBooking, setIsBooking] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('cash');
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
-  const [otp, setOtp] = useState('');
-  const [verified, setVerified] = useState(false);
-  const [bookingId, setBookingId] = useState(null);
-  const [otpTimer, setOtpTimer] = useState(0);
-  const [resendDisabled, setResendDisabled] = useState(false);
-  const [showScheduleModal, setShowScheduleModal] = useState(false);
-  const [useWallet, setUseWallet] = useState(false);
-  const [walletBalance, setWalletBalance] = useState(0);
+  const [pickup, setPickup] = useState('');
+  const [drop, setDrop] = useState('');
+  const [pickupCoords, setPickupCoords] = useState(null);
+  const [dropCoords, setDropCoords] = useState(null);
+  const [distance, setDistance] = useState(0);
+  const [duration, setDuration] = useState('');
+  const [calculating, setCalculating] = useState(false);
+  const [directionsService, setDirectionsService] = useState(null);
+  const [directionsRenderer, setDirectionsRenderer] = useState(null);
+  const [map, setMap] = useState(null);
+  const [vehicles, setVehicles] = useState([]);
+  const [showVehicles, setShowVehicles] = useState(false);
+  const [loadingVehicles, setLoadingVehicles] = useState(false);
+
+  const { isLoaded, loadError } = useLoadScript({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
+    libraries,
+  });
 
   useEffect(() => {
-    // Load saved user data from localStorage
-    const savedName = localStorage.getItem('user_name');
-    const savedPhone = localStorage.getItem('user_phone');
-    if (savedName) setName(savedName);
-    if (savedPhone) setPhone(savedPhone);
-  }, []);
-
-  useEffect(() => {
-    let timer;
-    if (otpTimer > 0) {
-      timer = setTimeout(() => setOtpTimer(otpTimer - 1), 1000);
-    } else {
-      setResendDisabled(false);
+    if (isLoaded && !directionsService) {
+      setDirectionsService(new google.maps.DirectionsService());
+      setDirectionsRenderer(new google.maps.DirectionsRenderer());
     }
-    return () => clearTimeout(timer);
-  }, [otpTimer]);
+  }, [isLoaded]);
 
-  // Add this useEffect to load wallet balance
   useEffect(() => {
-    const loadWallet = async () => {
-      if (phone) {
-        // First get user by phone number
-        const { data: userData } = await supabase
-          .from('users')
-          .select('id')
-          .eq('phone', phone)
-          .single();
-        
-        if (userData) {
-          const { data } = await supabase
-            .from('wallets')
-            .select('balance')
-            .eq('user_id', userData.id)
-            .single();
-          if (data) setWalletBalance(data.balance);
-        }
-      }
+    if (map && directionsRenderer) {
+      directionsRenderer.setMap(map);
+    }
+  }, [map, directionsRenderer]);
+
+  const calculateDistance = async () => {
+    if (!pickupCoords || !dropCoords || !directionsService) {
+      toast.error('Please select valid pickup and drop locations');
+      return;
+    }
+
+    setCalculating(true);
+    
+    const request = {
+      origin: { lat: pickupCoords.lat, lng: pickupCoords.lng },
+      destination: { lat: dropCoords.lat, lng: dropCoords.lng },
+      travelMode: google.maps.TravelMode.DRIVING,
+      unitSystem: google.maps.UnitSystem.METRIC,
     };
-    loadWallet();
-  }, [phone]);
 
-  const handleSendOtp = async () => {
-    if (!name || !phone) {
-      toast.error('Please enter your name and phone number');
-      return;
-    }
-    
-    if (phone.length !== 10) {
-      toast.error('Please enter a valid 10-digit phone number');
-      return;
-    }
-
-    setResendDisabled(true);
-    setOtpTimer(60);
-    
-    try {
-      const response = await fetch('/api/send-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, name }),
-      });
-      
-      const data = await response.json();
-      
-      if (response.ok) {
-        setOtpSent(true);
-        toast.success(`OTP sent to ${phone}`);
-        // For demo: show OTP in console, in production remove this
-        console.log('OTP for testing:', data.otp);
+    directionsService.route(request, (result, status) => {
+      if (status === 'OK') {
+        const route = result.routes[0];
+        const legs = route.legs[0];
+        const distInKm = legs.distance.value / 1000;
+        const timeInMinutes = legs.duration.value / 60;
+        
+        setDistance(distInKm);
+        setDuration(`${Math.floor(timeInMinutes)} min`);
+        
+        if (directionsRenderer) {
+          directionsRenderer.setDirections(result);
+        }
+        
+        if (map && result.routes[0].bounds) {
+          map.fitBounds(result.routes[0].bounds);
+        }
+        
+        toast.success(`Distance: ${distInKm.toFixed(1)} km`);
       } else {
-        toast.error(data.error || 'Failed to send OTP');
-        setResendDisabled(false);
-        setOtpTimer(0);
+        toast.error('Could not calculate route. Please check locations.');
       }
-    } catch (error) {
-      console.error('Send OTP error:', error);
-      toast.error('Network error. Please try again.');
-      setResendDisabled(false);
-      setOtpTimer(0);
-    }
+      setCalculating(false);
+    });
   };
 
-  const handleVerifyOtp = async () => {
-    if (!otp || otp.length !== 6) {
-      toast.error('Please enter a valid 6-digit OTP');
+  const findVehicles = async () => {
+    if (!pickupCoords || !dropCoords) {
+      toast.error('Please calculate distance first');
       return;
     }
-    
-    try {
-      const response = await fetch('/api/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, otp }),
-      });
-      
-      if (response.ok) {
-        setVerified(true);
-        toast.success('Phone verified successfully!');
-        localStorage.setItem('user_name', name);
-        localStorage.setItem('user_phone', phone);
-      } else {
-        const data = await response.json();
-        toast.error(data.error || 'Invalid OTP');
-      }
-    } catch (error) {
-      console.error('Verify OTP error:', error);
-      toast.error('Network error. Please try again.');
-    }
-  };
 
-  const handleResendOtp = () => {
-    if (!resendDisabled) {
-      handleSendOtp();
-    }
-  };
+    setLoadingVehicles(true);
+    setShowVehicles(false);
 
-  const handleBooking = async () => {
-    if (!verified) {
-      toast.error('Please verify your phone number first');
-      return;
-    }
-    
-    setIsBooking(true);
-    
     try {
-      const parsedStops = stops ? JSON.parse(stops) : [];
-      
-      // If using wallet, deduct balance
-      let finalFare = parseFloat(fare);
-      if (useWallet && walletBalance > 0) {
-        finalFare = Math.max(0, finalFare - Math.min(finalFare, walletBalance));
-      }
-      
-      const response = await fetch('/api/book', {
+      const response = await fetch('/api/find-vehicles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          pickup,
-          drop,
-          vehicle,
-          fare: finalFare,
-          distance: parseFloat(distance),
-          name,
-          phone,
-          paymentMethod: useWallet ? 'wallet' : paymentMethod,
-          tripType: tripType || 'oneway',
-          days: days ? parseInt(days) : 1,
-          stops: parsedStops,
-          useWallet,
-          walletDeduction: useWallet ? Math.min(parseFloat(fare), walletBalance) : 0,
+          pickupLat: pickupCoords.lat,
+          pickupLng: pickupCoords.lng,
+          dropLat: dropCoords.lat,
+          dropLng: dropCoords.lng,
+          distance: distance,
         }),
       });
-      
+
       const data = await response.json();
       
-      if (response.ok) {
-        setBookingId(data.bookingId);
-        toast.success('Booking confirmed!');
-        router.push(`/booking-success?id=${data.bookingId}`);
+      if (data.success) {
+        setVehicles(data.vehicles);
+        setShowVehicles(true);
+        toast.success(`${data.vehicles.length} vehicles found!`);
       } else {
-        toast.error(data.error || 'Booking failed. Please try again.');
+        toast.error(data.error || 'Failed to find vehicles');
       }
     } catch (error) {
-      console.error('Booking error:', error);
+      console.error('Find vehicles error:', error);
       toast.error('Network error. Please try again.');
-    } finally {
-      setIsBooking(false);
     }
+
+    setLoadingVehicles(false);
   };
 
-  const getVehicleDisplayName = () => {
-    const vehicleMap = {
-      auto: 'Auto Rickshaw',
-      sedan: 'Sedan',
-      suv: 'SUV',
-      luxury: 'Luxury',
-      tempo: 'Tempo Traveller'
-    };
-    const selectedVehicle = typeof vehicle === 'string' ? vehicle : 'sedan';
-    return vehicleMap[selectedVehicle] || 'Sedan';
+  const bookVehicle = (vehicle) => {
+    router.push({
+      pathname: '/confirm-booking',
+      query: {
+        pickup: encodeURIComponent(pickup),
+        drop: encodeURIComponent(drop),
+        pickupLat: pickupCoords.lat,
+        pickupLng: pickupCoords.lng,
+        dropLat: dropCoords.lat,
+        dropLng: dropCoords.lng,
+        distance: distance,
+        vehicleId: vehicle.id,
+        vehicleName: vehicle.name,
+        vehicleType: vehicle.id,
+        fare: vehicle.fare,
+      }
+    });
   };
 
-  const parseStopsList = () => {
-    if (!stops) return [];
-    try {
-      return JSON.parse(stops);
-    } catch {
-      return [];
-    }
-  };
-
-  const stopsList = parseStopsList();
+  if (loadError) return <div className="min-h-screen flex items-center justify-center">Error loading maps</div>;
+  if (!isLoaded) return <div className="min-h-screen flex items-center justify-center">Loading maps...</div>;
 
   return (
     <>
       <Head>
-        <title>Confirm Booking | Maa Saraswati Travels</title>
-        <meta name="description" content="Confirm your taxi booking. Best prices, professional drivers, 24/7 service." />
-        <meta name="robots" content="noindex, nofollow" />
+        <title>Book a Ride | Maa Saraswati Travels</title>
+        <meta name="description" content="Book your taxi ride instantly. Best prices, professional drivers, 24/7 service." />
       </Head>
 
       <div className="min-h-screen bg-gray-50">
@@ -235,160 +161,131 @@ export default function BookRide() {
           </div>
         </header>
 
-        <div className="container mx-auto px-4 py-8 max-w-2xl">
-          <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
-            <h1 className="text-3xl font-bold mb-6 text-gray-800">Confirm Your Booking</h1>
-            
-            <div className="space-y-4 mb-8 p-4 bg-orange-50 rounded-lg">
-              <div className="flex justify-between"><span className="font-semibold">📍 Pickup:</span> <span>{pickup || 'Not specified'}</span></div>
-              <div className="flex justify-between"><span className="font-semibold">📍 Drop:</span> <span>{drop || 'Not specified'}</span></div>
-              {stopsList.length > 0 && (
-                <div className="flex justify-between">
-                  <span className="font-semibold">🗺️ Stops:</span>
-                  <span>{stopsList.join(' → ')}</span>
+        <div className="container mx-auto px-4 py-8 max-w-6xl">
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Left Column - Booking Form */}
+            <div className="bg-white rounded-2xl shadow-xl p-6">
+              <h1 className="text-2xl font-bold mb-6 text-gray-800">Book a Ride</h1>
+              
+              <div className="space-y-4 mb-6">
+                <PlacesAutocomplete
+                  placeholder="📍 Pickup Location"
+                  value={pickup}
+                  onChange={setPickup}
+                  onSelect={(address, lat, lng) => {
+                    setPickup(address);
+                    setPickupCoords({ lat, lng });
+                  }}
+                />
+                <PlacesAutocomplete
+                  placeholder="📍 Drop Location"
+                  value={drop}
+                  onChange={setDrop}
+                  onSelect={(address, lat, lng) => {
+                    setDrop(address);
+                    setDropCoords({ lat, lng });
+                  }}
+                />
+              </div>
+
+              <div className="flex gap-4 mb-6">
+                <button
+                  onClick={calculateDistance}
+                  disabled={calculating || !pickupCoords || !dropCoords}
+                  className="flex-1 bg-gray-200 text-gray-800 py-3 rounded-xl font-semibold hover:bg-gray-300 transition disabled:opacity-50"
+                >
+                  {calculating ? 'Calculating...' : 'Calculate Distance'}
+                </button>
+                <button
+                  onClick={findVehicles}
+                  disabled={loadingVehicles || distance === 0}
+                  className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-xl font-semibold hover:shadow-xl transition disabled:opacity-50"
+                >
+                  {loadingVehicles ? 'Finding...' : 'Find Vehicles'}
+                </button>
+              </div>
+
+              {distance > 0 && (
+                <div className="p-4 bg-blue-50 rounded-xl">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-gray-600 text-sm">Distance</p>
+                      <p className="text-2xl font-bold text-blue-600">{distance.toFixed(1)} km</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-gray-600 text-sm">Estimated Time</p>
+                      <p className="text-2xl font-bold text-blue-600">{duration}</p>
+                    </div>
+                  </div>
                 </div>
               )}
-              <div className="flex justify-between"><span className="font-semibold">🚗 Vehicle:</span> <span>{getVehicleDisplayName()}</span></div>
-              <div className="flex justify-between"><span className="font-semibold">📏 Distance:</span> <span>{distance} km</span></div>
-              {tripType === 'multiday' && (
-                <div className="flex justify-between"><span className="font-semibold">📅 Days:</span> <span>{days} days</span></div>
-              )}
-              <div className="flex justify-between">
-                <span className="font-semibold text-2xl text-orange-600">💰 Total Fare:</span>
-                <span className="text-2xl font-bold text-orange-600">₹{fare}</span>
-              </div>
             </div>
 
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Contact Details</h2>
-
-              <input
-                type="text"
-                placeholder="Full Name"
-                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-orange-500"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+            {/* Right Column - Map */}
+            <div className="bg-white rounded-2xl shadow-xl p-4 h-[500px] overflow-hidden">
+              <div className="text-gray-600 text-sm mb-2">🗺️ Route Preview</div>
+              <div 
+                ref={(el) => {
+                  if (el && !map && window.google) {
+                    const newMap = new window.google.maps.Map(el, {
+                      center: { lat: 23.2599, lng: 77.4126 },
+                      zoom: 6,
+                      styles: [
+                        { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+                        { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+                        { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
+                      ],
+                    });
+                    setMap(newMap);
+                  }
+                }}
+                className="w-full h-full rounded-xl"
               />
-
-              <div className="flex gap-2 flex-wrap">
-                <input
-                  type="tel"
-                  placeholder="Phone Number"
-                  className="flex-1 p-3 border rounded-lg focus:ring-2 focus:ring-orange-500"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  maxLength="10"
-                />
-
-                {!otpSent ? (
-                  <button 
-                    onClick={handleSendOtp} 
-                    disabled={resendDisabled}
-                    className="bg-orange-500 text-white px-4 rounded-lg hover:bg-orange-600 disabled:opacity-50"
-                  >
-                    Send OTP
-                  </button>
-                ) : !verified ? (
-                  <div className="flex gap-2 flex-1">
-                    <input
-                      type="text"
-                      placeholder="6-digit OTP"
-                      className="w-28 p-3 border rounded-lg text-center text-lg font-mono"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                      maxLength="6"
-                    />
-                    <button 
-                      onClick={handleVerifyOtp} 
-                      className="bg-green-500 text-white px-4 rounded-lg hover:bg-green-600"
-                    >
-                      Verify
-                    </button>
-                    <button 
-                      onClick={handleResendOtp} 
-                      disabled={resendDisabled}
-                      className="text-orange-500 text-sm hover:underline disabled:opacity-50"
-                    >
-                      {resendDisabled ? `Resend in ${otpTimer}s` : 'Resend'}
-                    </button>
-                  </div>
-                ) : (
-                  <span className="text-green-600 font-semibold p-3 flex items-center">✓ Verified</span>
-                )}
-              </div>
-
-              <h2 className="text-xl font-semibold mt-4">Payment Method</h2>
-
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { value: 'cash', label: '💵 Cash', desc: 'Pay to driver' },
-                  { value: 'upi', label: '📱 UPI', desc: 'Google Pay, PhonePe' },
-                  { value: 'card', label: '💳 Card', desc: 'Credit/Debit Card' },
-                  { value: 'wallet', label: '👛 Wallet', desc: 'Prepaid balance' },
-                ].map(method => (
-                  <button
-                    key={method.value}
-                    onClick={() => setPaymentMethod(method.value)}
-                    className={`p-3 border rounded-lg text-left transition ${
-                      paymentMethod === method.value
-                        ? 'border-orange-500 bg-orange-50'
-                        : 'border-gray-200'
-                    }`}
-                  >
-                    <div className="font-semibold">{method.label}</div>
-                    <div className="text-xs text-gray-500">{method.desc}</div>
-                  </button>
-                ))}
-              </div>
-
-              {/* Add after payment method selection, before confirm button */}
-              {verified && (
-                <div className="mt-4 p-4 bg-orange-50 rounded-lg">
-                  <Wallet userId={phone} />
-                  
-                  {walletBalance >= parseFloat(fare) && (
-                    <label className="flex items-center gap-2 mt-3">
-                      <input
-                        type="checkbox"
-                        checked={useWallet}
-                        onChange={(e) => setUseWallet(e.target.checked)}
-                        className="w-4 h-4 text-orange-500"
-                      />
-                      <span className="text-sm">Pay ₹{Math.min(parseFloat(fare), walletBalance)} from wallet</span>
-                    </label>
-                  )}
-                  
-                  <button
-                    onClick={() => setShowScheduleModal(true)}
-                    className="mt-3 text-orange-500 text-sm hover:underline"
-                  >
-                    📅 Schedule for later
-                  </button>
-                </div>
-              )}
-
-              <button
-                onClick={handleBooking}
-                disabled={isBooking || !verified}
-                className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-lg font-semibold mt-6 hover:from-orange-600 hover:to-red-600 disabled:opacity-50 transition"
-              >
-                {isBooking ? 'Booking...' : 'Confirm Booking'}
-              </button>
             </div>
           </div>
+
+          {/* Vehicles List */}
+          {showVehicles && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-8"
+            >
+              <h2 className="text-2xl font-bold mb-4 text-gray-800">Available Vehicles</h2>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {vehicles.map((vehicle) => (
+                  <motion.div
+                    key={vehicle.id}
+                    initial={{ scale: 0.95 }}
+                    animate={{ scale: 1 }}
+                    whileHover={{ scale: 1.02 }}
+                    className="bg-white rounded-xl shadow-lg p-4 cursor-pointer hover:shadow-xl transition-all"
+                    onClick={() => bookVehicle(vehicle)}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="text-5xl">{vehicle.icon}</div>
+                      <div className="flex-1">
+                        <h3 className="font-bold text-lg">{vehicle.name}</h3>
+                        <p className="text-gray-500 text-sm">{vehicle.seating_capacity} seats</p>
+                        <p className="text-gray-400 text-xs">{vehicle.description}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-orange-500">₹{Math.round(vehicle.fare)}</p>
+                        <p className="text-xs text-gray-400">{vehicle.eta} min away</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex gap-2">
+                      <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">AC</span>
+                      <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">GPS</span>
+                      <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">24/7 Support</span>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
         </div>
       </div>
-
-      {/* Add at bottom before closing div */}
-      <ScheduledRideModal
-        isOpen={showScheduleModal}
-        onClose={() => setShowScheduleModal(false)}
-        pickup={pickup}
-        drop={drop}
-        vehicle={vehicle}
-        fare={fare}
-        distance={distance}
-      />
     </>
   );
 }

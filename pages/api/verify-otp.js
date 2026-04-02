@@ -12,12 +12,12 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Find user with this phone and OTP
+    // Find user with this phone
     const { data: user, error: userError } = await supabase
       .from('profiles')
       .select('id, otp_code, otp_expiry')
       .eq('phone', phone)
-      .single();
+      .maybeSingle();
 
     if (userError || !user) {
       return res.status(400).json({ error: 'Invalid phone number' });
@@ -51,13 +51,18 @@ export default async function handler(req, res) {
 
     // If bookingId provided, update ride status
     if (bookingId) {
-      await supabase
+      const { error: rideError } = await supabase
         .from('rides')
         .update({ 
           status: 'confirmed',
           verified_at: new Date().toISOString()
         })
         .eq('id', bookingId);
+
+      if (rideError) {
+        console.error('Ride update error:', rideError);
+        // Don't fail the request, just log error
+      }
     }
 
     res.status(200).json({ 

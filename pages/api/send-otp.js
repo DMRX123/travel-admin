@@ -20,15 +20,16 @@ export default async function handler(req, res) {
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpiry = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
-    // Store OTP in database
-    const { data: existingUser } = await supabase
+    // Check if user exists
+    const { data: existingUser, error: findError } = await supabase
       .from('profiles')
       .select('id')
       .eq('phone', phone)
-      .single();
+      .maybeSingle();
 
     if (existingUser) {
-      await supabase
+      // Update existing user
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({ 
           otp_code: otpCode, 
@@ -36,8 +37,11 @@ export default async function handler(req, res) {
           is_verified: false 
         })
         .eq('id', existingUser.id);
+
+      if (updateError) throw updateError;
     } else {
-      await supabase
+      // Create new user
+      const { error: insertError } = await supabase
         .from('profiles')
         .insert({
           full_name: name || '',
@@ -47,6 +51,8 @@ export default async function handler(req, res) {
           otp_code: otpCode,
           otp_expiry: otpExpiry,
         });
+
+      if (insertError) throw insertError;
     }
 
     // Send SMS via MSG91 (Production)
