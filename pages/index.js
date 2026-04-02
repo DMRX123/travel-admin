@@ -91,14 +91,12 @@ export default function HomePage() {
     }
   }, [map, directionsRenderer]);
 
-  // Add inside component after getting userId
   useEffect(() => {
     const getUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         setUserId(session.user.id);
         
-        // Get user profile for name
         const { data: profile } = await supabase
           .from('profiles')
           .select('full_name')
@@ -192,7 +190,6 @@ export default function HomePage() {
         <meta name="geo.placename" content="India" />
         <link rel="canonical" href="https://maasaraswatitravels.com" />
         
-        {/* JSON-LD Structured Data */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -590,7 +587,6 @@ export default function HomePage() {
           </div>
         </footer>
 
-        {/* Add after footer, before closing div */}
         {userId && (
           <>
             <div className="fixed left-6 bottom-6 z-40 w-72">
