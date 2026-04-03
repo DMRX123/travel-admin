@@ -5,6 +5,7 @@ import { updateDriverLocation, updateRideStatus, trackRide } from '../../lib/fir
 import Head from 'next/head';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import DriverBadges from '../../components/DriverBadges';
 
 export default function DriverDashboard() {
   const router = useRouter();
@@ -250,6 +251,7 @@ export default function DriverDashboard() {
         </header>
 
         <div className="container mx-auto px-4 py-8">
+          {/* Earnings Section */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className="bg-white rounded-xl shadow p-6">
               <p className="text-gray-500 text-sm">Today's Earnings</p>
@@ -265,6 +267,18 @@ export default function DriverDashboard() {
             </div>
           </div>
 
+          {/* Driver Badges Section */}
+          <div className="mb-8">
+            <DriverBadges driverStats={{
+              totalRides: driver?.total_trips || 0,
+              rating: driver?.rating || 0,
+              totalEarnings: driver?.earnings || 0,
+              onTimeRate: 95,
+              safetyRating: 100
+            }} />
+          </div>
+
+          {/* Current Ride Section */}
           {currentRide && (
             <div className="bg-white rounded-xl shadow mb-8">
               <div className="px-6 py-4 border-b bg-green-50">
@@ -277,7 +291,6 @@ export default function DriverDashboard() {
                   <p><strong>💰 Fare:</strong> ₹{currentRide.fare}</p>
                   <p><strong>📏 Distance:</strong> {currentRide.distance} km</p>
                   
-                  {/* Add after earnings section */}
                   {currentRide?.rating && (
                     <div className="mt-2 flex items-center gap-1">
                       {[1, 2, 3, 4, 5].map(star => (
@@ -326,6 +339,7 @@ export default function DriverDashboard() {
             </div>
           )}
 
+          {/* Ride Requests Section */}
           <div className="bg-white rounded-xl shadow">
             <div className="px-6 py-4 border-b bg-orange-50">
               <h2 className="text-xl font-semibold text-gray-800">Ride Requests</h2>
@@ -362,6 +376,7 @@ export default function DriverDashboard() {
             </div>
           </div>
 
+          {/* Quick Links Section */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
             <Link href="/driver/earnings" className="bg-white rounded-xl shadow p-4 text-center hover:shadow-md transition">
               <div className="text-3xl mb-2">💰</div><p className="font-semibold">Earnings</p>
