@@ -1,17 +1,17 @@
 {
   "name": "maa-saraswati-travels",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "next lint --fix",
     "postbuild": "next-sitemap",
+    "vercel-build": "next build",
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch --passWithNoTests",
     "test:coverage": "jest --coverage --passWithNoTests",
-    "test:ci": "jest --ci --coverage --maxWorkers=2 --passWithNoTests",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

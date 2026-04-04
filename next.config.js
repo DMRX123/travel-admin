@@ -24,9 +24,7 @@ const nextConfig = {
       },
     ],
   },
-  // Important for Vercel
-  output: 'standalone',
-  trailingSlash: false,
+  // Important: Don't use output: 'standalone' for now
 }
 
 module.exports = nextConfig
