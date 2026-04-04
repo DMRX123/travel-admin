@@ -3,10 +3,10 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   eslint: {
-    ignoreDuringBuilds: true,  // ← Add this to bypass ESLint errors
+    ignoreDuringBuilds: true,
   },
   typescript: {
-    ignoreBuildErrors: true,   // ← Add this to bypass TypeScript errors
+    ignoreBuildErrors: true,
   },
   images: {
     remotePatterns: [
@@ -24,8 +24,9 @@ const nextConfig = {
       },
     ],
   },
-  // Ignore build errors from specific packages
-  transpilePackages: ['framer-motion', 'react-hot-toast'],
+  // Important for Vercel
+  output: 'standalone',
+  trailingSlash: false,
 }
 
 module.exports = nextConfig
