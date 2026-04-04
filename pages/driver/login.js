@@ -1,14 +1,12 @@
-// pages/login.js - COMPLETE WORKING VERSION
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import Link from 'next/link';
 import Head from 'next/head';
 import { motion } from 'framer-motion';
-import toast from 'react-hot-toast';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../../context/ThemeContext';
 
-export default function AdminLogin() {
+export default function DriverLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,8 +26,8 @@ export default function AdminLogin() {
           .eq('id', session.user.id)
           .single();
         
-        if (profile?.user_type === 'admin') {
-          router.replace('/dashboard');
+        if (profile?.user_type === 'driver') {
+          router.replace('/driver/dashboard');
         }
       }
     };
@@ -41,7 +39,6 @@ export default function AdminLogin() {
     setLoading(true);
     setError('');
 
-    // Validate inputs
     if (!email || !password) {
       setError('Please enter both email and password');
       setLoading(false);
@@ -49,24 +46,20 @@ export default function AdminLogin() {
     }
 
     try {
-      // Sign in with Supabase
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password: password,
       });
 
       if (signInError) {
-        if (signInError.message === 'Invalid login credentials') {
-          throw new Error('Invalid email or password');
-        }
-        throw signInError;
+        throw new Error('Invalid email or password');
       }
 
       if (!data?.user) {
-        throw new Error('Login failed. Please try again.');
+        throw new Error('Login failed');
       }
 
-      // Check if user is admin
+      // Check if user is driver
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('user_type, is_active')
@@ -75,30 +68,40 @@ export default function AdminLogin() {
 
       if (profileError || !profile) {
         await supabase.auth.signOut();
-        throw new Error('User profile not found');
+        throw new Error('Driver profile not found');
       }
 
-      if (profile.user_type !== 'admin') {
+      if (profile.user_type !== 'driver') {
         await supabase.auth.signOut();
-        throw new Error('Unauthorized access. Admin only.');
+        throw new Error('Invalid driver credentials');
       }
 
       if (!profile.is_active) {
         await supabase.auth.signOut();
-        throw new Error('Your account is disabled. Contact support.');
+        throw new Error('Your account is disabled');
       }
 
-      toast.success('Login successful! Redirecting...');
+      // Check if driver is approved
+      const { data: driverData } = await supabase
+        .from('drivers')
+        .select('is_approved')
+        .eq('id', data.user.id)
+        .single();
+
+      if (!driverData?.is_approved) {
+        await supabase.auth.signOut();
+        throw new Error('Your application is pending approval');
+      }
+
+      toast.success('Login successful!');
       
-      // Use window.location for hard redirect
       setTimeout(() => {
-        window.location.href = '/dashboard';
+        window.location.href = '/driver/dashboard';
       }, 500);
       
     } catch (err) {
-      console.error('Login error:', err);
-      setError(err.message || 'Login failed. Please try again.');
-      toast.error(err.message || 'Login failed');
+      setError(err.message);
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
@@ -107,8 +110,7 @@ export default function AdminLogin() {
   return (
     <>
       <Head>
-        <title>Admin Login | Maa Saraswati Travels</title>
-        <meta name="robots" content="noindex, nofollow" />
+        <title>Driver Login | Maa Saraswati Travels</title>
       </Head>
       
       <div className={`min-h-screen flex items-center justify-center transition-colors duration-300 ${
@@ -125,12 +127,12 @@ export default function AdminLogin() {
             theme === 'dark' ? 'bg-gray-800' : 'bg-white'
           }`}>
             <div className="text-center mb-8">
-              <div className="text-5xl mb-3 animate-bounce">🚐</div>
+              <div className="text-5xl mb-3 animate-bounce">🚗</div>
               <h1 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                Maa Saraswati Travels
+                Driver Login
               </h1>
               <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                Admin Login
+                Maa Saraswati Travels
               </p>
             </div>
 
@@ -156,10 +158,10 @@ export default function AdminLogin() {
                   required
                   className={`w-full px-4 py-3 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-orange-500 ${
                     theme === 'dark' 
-                      ? 'bg-gray-700 border-gray-600 text-white focus:border-orange-500' 
-                      : 'bg-gray-50 border border-gray-300 text-gray-900 focus:border-orange-500'
+                      ? 'bg-gray-700 border-gray-600 text-white' 
+                      : 'bg-gray-50 border border-gray-300 text-gray-900'
                   }`}
-                  placeholder="admin@maasaraswatitravels.com"
+                  placeholder="driver@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={loading}
@@ -178,8 +180,8 @@ export default function AdminLogin() {
                     required
                     className={`w-full px-4 py-3 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-orange-500 ${
                       theme === 'dark' 
-                        ? 'bg-gray-700 border-gray-600 text-white focus:border-orange-500' 
-                        : 'bg-gray-50 border border-gray-300 text-gray-900 focus:border-orange-500'
+                        ? 'bg-gray-700 border-gray-600 text-white' 
+                        : 'bg-gray-50 border border-gray-300 text-gray-900'
                     }`}
                     placeholder="••••••••"
                     value={password}
@@ -189,7 +191,7 @@ export default function AdminLogin() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
                   >
                     {showPassword ? '👁️' : '👁️‍🗨️'}
                   </button>
@@ -199,41 +201,29 @@ export default function AdminLogin() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold py-3 rounded-lg transition-all disabled:opacity-50"
               >
-                {loading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Signing in...
-                  </span>
-                ) : (
-                  'Sign In'
-                )}
+                {loading ? 'Signing in...' : 'Sign In'}
               </button>
             </form>
             
-            <div className="mt-6 text-center">
+            <div className="mt-6 text-center space-y-2">
               <Link 
                 href="/" 
-                className={`text-sm transition-colors ${
-                  theme === 'dark' 
-                    ? 'text-gray-400 hover:text-orange-400' 
-                    : 'text-gray-600 hover:text-orange-600'
+                className={`block text-sm transition-colors ${
+                  theme === 'dark' ? 'text-gray-400 hover:text-orange-400' : 'text-gray-600 hover:text-orange-600'
                 }`}
               >
                 ← Back to Website
               </Link>
-            </div>
-
-            {/* Demo Credentials - Remove in production */}
-            <div className={`mt-6 p-3 rounded-lg text-center text-xs ${
-              theme === 'dark' ? 'bg-gray-700/50 text-gray-400' : 'bg-gray-100 text-gray-500'
-            }`}>
-              <p>Demo Admin: admin@maasaraswatitravels.com</p>
-              <p>Demo Password: Admin@123</p>
+              <Link 
+                href="/driver/register" 
+                className={`block text-sm transition-colors ${
+                  theme === 'dark' ? 'text-orange-400 hover:text-orange-300' : 'text-orange-600 hover:text-orange-700'
+                }`}
+              >
+                New Driver? Register Here
+              </Link>
             </div>
           </div>
         </motion.div>

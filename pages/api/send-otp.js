@@ -1,4 +1,8 @@
+// pages/api/send-otp.js - UPDATED with rate limiting
 import { supabase } from '../../lib/supabase';
+
+// Rate limiting store
+const rateLimitMap = new Map();
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -15,12 +19,20 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Please enter a valid 10-digit phone number' });
   }
 
+  // Rate limiting - 60 seconds cooldown
+  const lastRequest = rateLimitMap.get(phone);
+  if (lastRequest && Date.now() - lastRequest < 60000) {
+    return res.status(429).json({ 
+      error: 'Please wait 60 seconds before requesting another OTP' 
+    });
+  }
+
+  rateLimitMap.set(phone, Date.now());
+
   try {
-    // Generate 6-digit OTP
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpiry = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
-    // Check if user exists
     const { data: existingUser, error: findError } = await supabase
       .from('profiles')
       .select('id')
@@ -28,20 +40,12 @@ export default async function handler(req, res) {
       .maybeSingle();
 
     if (existingUser) {
-      // Update existing user
-      const { error: updateError } = await supabase
+      await supabase
         .from('profiles')
-        .update({ 
-          otp_code: otpCode, 
-          otp_expiry: otpExpiry,
-          is_verified: false 
-        })
+        .update({ otp_code: otpCode, otp_expiry: otpExpiry, is_verified: false })
         .eq('id', existingUser.id);
-
-      if (updateError) throw updateError;
     } else {
-      // Create new user
-      const { error: insertError } = await supabase
+      await supabase
         .from('profiles')
         .insert({
           full_name: name || '',
@@ -51,11 +55,9 @@ export default async function handler(req, res) {
           otp_code: otpCode,
           otp_expiry: otpExpiry,
         });
-
-      if (insertError) throw insertError;
     }
 
-    // Send SMS via MSG91 (Production)
+    // Send SMS via API
     if (process.env.SMS_API_KEY) {
       try {
         await fetch('https://api.msg91.com/api/v5/otp', {
@@ -72,11 +74,9 @@ export default async function handler(req, res) {
         });
       } catch (smsError) {
         console.error('SMS send error:', smsError);
-        // Don't fail the request, just log error
       }
     }
 
-    // For development, return OTP (remove in production)
     console.log(`[DEV] OTP for ${phone}: ${otpCode}`);
 
     res.status(200).json({ 

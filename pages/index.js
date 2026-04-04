@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useLoadScript } from '@react-google-maps/api';
+import toast from 'react-hot-toast';
 import PlacesAutocomplete from '../components/PlacesAutocomplete';
 import VehicleTracker from '../components/VehicleTracker';
 import LanguageSwitcher from '../components/LanguageSwitcher';
@@ -11,23 +12,15 @@ import NotificationBell from '../components/NotificationBell';
 import VoiceSearch from '../components/VoiceSearch';
 import ThemeToggle from '../components/ThemeToggle';
 import SavedPlaces from '../components/SavedPlaces';
+import SurgeBadge from '../components/SurgeBadge';
 import { useLanguage } from '../context/LanguageContext';
 import { useNotifications } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
-import toast from 'react-hot-toast';
 import ReferralCard from '../components/ReferralCard';
 import LiveChat from '../components/LiveChat';
-import { supabase } from '../lib/supabase';
+import { supabase, calculateFare, getSurgeMultiplier, VEHICLE_TYPES } from '../lib/supabase';
 
 const libraries = ["places"];
-
-const vehicleRates = {
-  auto: 10,
-  sedan: 15,
-  suv: 20,
-  luxury: 30,
-  tempo: 25,
-};
 
 const mpDestinations = [
   { name: "Ujjain Mahakaleshwar", city: "Ujjain", slug: "ujjain-mahakaleshwar", type: "Jyotirlinga", icon: "🕉️", lat: 23.1798, lng: 75.7883, color: "from-orange-500 to-red-500" },
@@ -68,13 +61,13 @@ export default function HomePage() {
   const [vehicle, setVehicle] = useState('sedan');
   const [distance, setDistance] = useState(0);
   const [fare, setFare] = useState(0);
+  const [surgeMultiplier, setSurgeMultiplier] = useState(1);
   const [duration, setDuration] = useState('');
   const [calculating, setCalculating] = useState(false);
   const [showFare, setShowFare] = useState(false);
   const [directionsService, setDirectionsService] = useState(null);
   const [directionsRenderer, setDirectionsRenderer] = useState(null);
   const [map, setMap] = useState(null);
-  const [showVehicleTracker, setShowVehicleTracker] = useState(false);
   const [userId, setUserId] = useState(null);
   const [userName, setUserName] = useState('');
 
@@ -118,9 +111,9 @@ export default function HomePage() {
     getUser();
   }, []);
 
-  const calculateDistanceAndFare = async () => {
+  const calculateDistanceAndFare = useCallback(async () => {
     if (!pickupCoords || !dropCoords || !directionsService) {
-      toast.error('Please select valid pickup and drop locations from suggestions');
+      toast.error('Please select valid pickup and drop locations');
       return;
     }
 
@@ -133,7 +126,7 @@ export default function HomePage() {
       unitSystem: google.maps.UnitSystem.METRIC,
     };
 
-    directionsService.route(request, (result, status) => {
+    directionsService.route(request, async (result, status) => {
       if (status === 'OK') {
         const route = result.routes[0];
         const legs = route.legs[0];
@@ -143,8 +136,12 @@ export default function HomePage() {
         setDistance(distInKm);
         setDuration(`${Math.floor(timeInMinutes)} min`);
         
-        const rate = vehicleRates[vehicle] || 15;
-        const calculatedFare = distInKm * rate;
+        // Get surge multiplier
+        const surge = await getSurgeMultiplier('default', vehicle);
+        setSurgeMultiplier(surge);
+        
+        const rate = VEHICLE_TYPES[vehicle.toUpperCase()]?.perKm || 15;
+        const calculatedFare = calculateFare(vehicle, distInKm, surge);
         setFare(calculatedFare);
         setShowFare(true);
         
@@ -158,12 +155,11 @@ export default function HomePage() {
         
         toast.success(`Fare calculated: ₹${calculatedFare.toFixed(2)}`);
       } else {
-        console.error('Directions request failed due to ' + status);
         toast.error('Could not calculate route. Please check locations.');
       }
       setCalculating(false);
     });
-  };
+  }, [pickupCoords, dropCoords, directionsService, vehicle, map]);
 
   const handleSearch = () => {
     if (!pickup || !drop) {
@@ -174,7 +170,7 @@ export default function HomePage() {
       toast.error('Please calculate fare first');
       return;
     }
-    router.push(`/book?pickup=${encodeURIComponent(pickup)}&drop=${encodeURIComponent(drop)}&vehicle=${vehicle}&distance=${distance}&fare=${fare}`);
+    router.push(`/book?pickup=${encodeURIComponent(pickup)}&drop=${encodeURIComponent(drop)}&vehicle=${vehicle}&distance=${distance}&fare=${fare}&surge=${surgeMultiplier}`);
   };
 
   const handleCreateTrip = () => {
@@ -184,47 +180,32 @@ export default function HomePage() {
   if (loadError) return <div className="min-h-screen flex items-center justify-center text-white bg-slate-900">Error loading maps. Please check your API key.</div>;
   if (!isLoaded) return <div className="min-h-screen flex items-center justify-center bg-slate-900"><div className="animate-spin rounded-full h-16 w-16 border-b-4 border-orange-500"></div><p className="ml-4 text-white">Loading Google Maps...</p></div>;
 
+  const vehicleList = Object.entries(VEHICLE_TYPES || {
+    BIKE: { id: 'bike', name: 'Bike', icon: '🏍️', perKm: 8 },
+    AUTO: { id: 'auto', name: 'Auto', icon: '🛺', perKm: 12 },
+    SEDAN: { id: 'sedan', name: 'Sedan', icon: '🚗', perKm: 15 },
+    SUV: { id: 'suv', name: 'SUV', icon: '🚙', perKm: 20 },
+    LUXURY: { id: 'luxury', name: 'Luxury', icon: '🚘', perKm: 30 },
+  });
+
   return (
     <>
       <Head>
         <title>Maa Saraswati Travels - Best Taxi Service in India | Book Cab Online</title>
-        <meta name="description" content="Book taxi for Ujjain Mahakaleshwar, Omkareshwar, Khajuraho, Ayodhya, Varanasi. Real-time fare, GPS tracking, professional drivers. 24/7 service. Book now!" />
-        <meta name="keywords" content="MP Tourism, Ujjain taxi, Omkareshwar taxi, Khajuraho taxi, Bandhavgarh taxi, Mahakaleshwar darshan, Ayodhya taxi, Varanasi taxi, taxi booking app" />
+        <meta name="description" content="Book bike, auto, car for Ujjain, Omkareshwar, Khajuraho, Ayodhya, Varanasi. Real-time fare, GPS tracking, professional drivers. 24/7 service." />
+        <meta name="keywords" content="MP Tourism, Ujjain taxi, Omkareshwar taxi, Khajuraho taxi, Bandhavgarh taxi, Mahakaleshwar darshan, Ayodhya taxi, Varanasi taxi, taxi booking" />
         <meta name="author" content="Maa Saraswati Travels" />
-        <meta name="geo.region" content="IN" />
-        <meta name="geo.placename" content="India" />
         <link rel="canonical" href="https://maasaraswatitravels.com" />
-        
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "LocalBusiness",
-              "name": "Maa Saraswati Travels",
-              "image": "https://maasaraswatitravels.com/logo.png",
-              "description": "Best taxi service in India. Book cabs for Ujjain, Omkareshwar, Khajuraho, Ayodhya, Varanasi and more.",
-              "address": {
-                "@type": "PostalAddress",
-                "addressLocality": "Indore",
-                "addressRegion": "Madhya Pradesh",
-                "addressCountry": "IN"
-              },
-              "geo": {
-                "@type": "GeoCoordinates",
-                "latitude": "22.7196",
-                "longitude": "75.8577"
-              },
-              "openingHours": "Mo-Su 00:00-23:59",
-              "telephone": "+919876543210",
-              "priceRange": "₹₹",
-              "sameAs": [
-                "https://www.facebook.com/maasaraswatitravels",
-                "https://www.instagram.com/maasaraswatitravels"
-              ]
-            })
-          }}
-        />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "LocalBusiness",
+            "name": "Maa Saraswati Travels",
+            "description": "Best taxi service in India",
+            "telephone": "+919876543210",
+            "priceRange": "₹₹",
+          })
+        }} />
       </Head>
 
       <div className={`min-h-screen transition-colors duration-300 ${
@@ -232,6 +213,7 @@ export default function HomePage() {
           ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900' 
           : 'bg-gradient-to-br from-gray-100 via-gray-50 to-white'
       }`}>
+        {/* Header */}
         <header className={`sticky top-0 z-50 border-b ${
           theme === 'dark' 
             ? 'bg-white/10 backdrop-blur-xl border-white/10' 
@@ -250,6 +232,7 @@ export default function HomePage() {
               </Link>
               <NotificationBell />
               <LanguageSwitcher />
+              <ThemeToggle />
               <a href="tel:+919876543210" className="bg-orange-500 text-white px-4 py-2 rounded-full hover:bg-orange-600 transition shadow-lg text-sm font-medium flex items-center gap-1">
                 📞 24/7 Support
               </a>
@@ -257,6 +240,7 @@ export default function HomePage() {
           </div>
         </header>
 
+        {/* Main Content */}
         <section className="container mx-auto px-4 py-8 md:py-12">
           <div className="max-w-6xl mx-auto">
             <motion.div
@@ -278,10 +262,10 @@ export default function HomePage() {
                 setPickup(query);
                 toast.success(`Searching for: ${query}`);
               }} />
-              <ThemeToggle />
             </div>
 
             <div className="grid lg:grid-cols-2 gap-8">
+              {/* Left Column - Booking Form */}
               <motion.div
                 initial={{ opacity: 0, x: -30 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -329,28 +313,30 @@ export default function HomePage() {
                   />
                 </div>
 
+                {/* Vehicle Selection */}
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-                  {Object.entries(vehicleRates).map(([key, rate]) => (
+                  {Object.entries(vehicleList).map(([key, v]) => (
                     <motion.button
                       key={key}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => setVehicle(key)}
+                      onClick={() => setVehicle(v.id)}
                       className={`p-3 rounded-xl text-center transition-all ${
-                        vehicle === key 
+                        vehicle === v.id 
                           ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg' 
                           : theme === 'dark'
                             ? 'bg-white/10 text-white/80 hover:bg-white/20'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                     >
-                      <div className="text-2xl">{key === 'auto' ? '🛺' : key === 'sedan' ? '🚗' : key === 'suv' ? '🚙' : key === 'luxury' ? '🚘' : '🚐'}</div>
-                      <div className="font-semibold text-sm capitalize">{key}</div>
-                      <div className="text-xs">₹{rate}/km</div>
+                      <div className="text-2xl">{v.icon}</div>
+                      <div className="font-semibold text-sm capitalize">{v.name}</div>
+                      <div className="text-xs">₹{v.perKm}/km</div>
                     </motion.button>
                   ))}
                 </div>
 
+                {/* Action Buttons */}
                 <div className="flex gap-4">
                   <button
                     onClick={calculateDistanceAndFare}
@@ -372,6 +358,7 @@ export default function HomePage() {
                   </button>
                 </div>
 
+                {/* Fare Display with Surge Badge */}
                 {showFare && fare > 0 && (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -380,7 +367,10 @@ export default function HomePage() {
                   >
                     <div className="flex justify-between items-center">
                       <div>
-                        <p className={theme === 'dark' ? 'text-white/80' : 'text-gray-600'}>Estimated Fare</p>
+                        <div className="flex items-center gap-2">
+                          <p className={theme === 'dark' ? 'text-white/80' : 'text-gray-600'}>Estimated Fare</p>
+                          {surgeMultiplier > 1 && <SurgeBadge multiplier={surgeMultiplier} />}
+                        </div>
                         <p className="text-3xl font-bold text-green-400">₹{fare.toFixed(2)}</p>
                       </div>
                       <div className="text-right">
@@ -392,6 +382,7 @@ export default function HomePage() {
                 )}
               </motion.div>
 
+              {/* Right Column - Map */}
               <motion.div
                 initial={{ opacity: 0, x: 30 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -402,7 +393,7 @@ export default function HomePage() {
                 } rounded-2xl p-4 border h-[500px] overflow-hidden`}
               >
                 <div className={`text-sm mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-700'}`}>
-                  📍 Route Preview
+                  🗺️ Route Preview
                 </div>
                 <div 
                   ref={(el) => {
@@ -412,10 +403,7 @@ export default function HomePage() {
                         zoom: 6,
                         styles: theme === 'dark' ? [
                           { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-                          { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
                           { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-                          { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
-                          { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
                           { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
                         ] : undefined,
                       });
@@ -429,7 +417,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Rest of the sections remain the same */}
+        {/* Explore Sacred India Section */}
         <section className="py-16 bg-white/5">
           <div className="container mx-auto px-4">
             <motion.h2 
@@ -462,6 +450,7 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* Popular Routes Section */}
         <section className="py-16">
           <div className="container mx-auto px-4">
             <motion.h2 
@@ -508,6 +497,7 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* Why Choose Us Section */}
         <section className="py-16 bg-white/5">
           <div className="container mx-auto px-4">
             <motion.h2 
@@ -553,6 +543,7 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* Testimonials Section */}
         <section className="py-16">
           <div className="container mx-auto px-4">
             <motion.h2 
@@ -605,6 +596,7 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* CTA Section */}
         <section className="py-16 bg-gradient-to-r from-orange-600 to-red-600">
           <div className="container mx-auto px-4 text-center">
             <motion.h2 
@@ -626,6 +618,7 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* Footer */}
         <footer className={`py-12 border-t ${theme === 'dark' ? 'bg-slate-900 border-white/10' : 'bg-gray-100 border-gray-200'}`}>
           <div className="container mx-auto px-4">
             <div className="grid md:grid-cols-4 gap-8">
@@ -673,6 +666,7 @@ export default function HomePage() {
           </div>
         </footer>
 
+        {/* Floating Components */}
         {userId && (
           <>
             <div className="fixed left-6 bottom-6 z-40 w-72">

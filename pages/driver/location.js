@@ -38,8 +38,8 @@ export default async function handler(req, res) {
     await supabase
       .from('drivers')
       .update({
-        last_lat: lat,
-        last_lng: lng,
+        current_latitude: lat,
+        current_longitude: lng,
         last_location_update: new Date().toISOString(),
       })
       .eq('id', session.user.id);

@@ -1,106 +1,91 @@
-import { supabaseAdmin } from '../../lib/supabase';
-import { trackAPI } from '../../lib/monitoring';
+// pages/api/book.js - COMPLETE UPDATED VERSION
+import { supabaseAdmin, createRideRequest, calculateFare, getSurgePricing, VEHICLE_TYPES } from '../../lib/supabase';
 
 export default async function handler(req, res) {
-  const startTime = Date.now();
-  
-  // Only allow POST requests
   if (req.method !== 'POST') {
-    await trackAPI('/api/book', Date.now() - startTime, 405);
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    // Extract data from request body
     const { 
       pickup, 
       drop, 
-      vehicle, 
-      fare, 
-      distance, 
+      vehicleType, 
+      pickupLat, 
+      pickupLng, 
+      dropLat, 
+      dropLng,
+      distance,
       name, 
       phone, 
-      paymentMethod,
-      pickupLat,
-      pickupLng,
-      dropLat,
-      dropLng,
-      tripType = 'oneway',
-      days = 1,
-      stops = []
+      email
     } = req.body;
 
-    // Validate required fields
-    if (!pickup || !drop || !fare || !phone) {
-      await trackAPI('/api/book', Date.now() - startTime, 400);
+    if (!pickup || !drop || !vehicleType || !pickupLat || !pickupLng) {
       return res.status(400).json({ 
-        error: 'Missing required fields: pickup, drop, fare, and phone are required' 
+        error: 'Missing required fields' 
       });
     }
 
-    // Generate 6-digit OTP for ride verification
+    if (!VEHICLE_TYPES[vehicleType.toUpperCase()]) {
+      return res.status(400).json({ error: 'Invalid vehicle type' });
+    }
+
+    // Calculate fare
+    const surgeMultiplier = 1; // Get from surge_pricing table
+    const fare = calculateFare(vehicleType, distance || 5, surgeMultiplier);
+    
+    // Generate OTP
     const rideOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
     // Find or create user
     let userId;
-    
-    // Check if user already exists
-    const { data: existingUser, error: findError } = await supabaseAdmin
+    const { data: existingUser } = await supabaseAdmin
       .from('profiles')
       .select('id')
       .eq('phone', phone)
       .maybeSingle();
 
     if (existingUser) {
-      // User exists, use existing ID
       userId = existingUser.id;
-      
-      // Update user name if changed
       await supabaseAdmin
         .from('profiles')
-        .update({ 
-          full_name: name,
-          updated_at: new Date().toISOString()
-        })
+        .update({ full_name: name, email: email || null })
         .eq('id', userId);
     } else {
-      // Create new user
-      const { data: newUser, error: userError } = await supabaseAdmin
+      const { data: newUser } = await supabaseAdmin
         .from('profiles')
         .insert({
           full_name: name,
           phone: phone,
+          email: email || null,
           user_type: 'user',
           is_verified: false,
           created_at: new Date().toISOString(),
         })
         .select()
         .single();
-      
-      if (userError) throw userError;
       userId = newUser.id;
     }
 
-    // Create ride in database
+    // Create ride
     const { data: ride, error: rideError } = await supabaseAdmin
       .from('rides')
       .insert({
         user_id: userId,
         pickup_address: pickup,
         drop_address: drop,
-        pickup_lat: pickupLat || null,
-        pickup_lng: pickupLng || null,
-        drop_lat: dropLat || null,
-        drop_lng: dropLng || null,
-        vehicle_type: vehicle,
-        fare: parseFloat(fare),
-        distance: parseFloat(distance),
-        payment_method: paymentMethod || 'cash',
-        payment_status: 'pending',
+        pickup_lat: pickupLat,
+        pickup_lng: pickupLng,
+        drop_lat: dropLat,
+        drop_lng: dropLng,
+        vehicle_type: vehicleType,
+        fare: fare,
+        base_fare: fare,
+        surge_multiplier: surgeMultiplier,
+        distance: distance || 0,
+        payment_method: 'qr',
         status: 'pending',
-        trip_type: tripType,
-        days: days,
-        stops: stops,
         otp_code: rideOtp,
         created_at: new Date().toISOString(),
       })
@@ -109,68 +94,20 @@ export default async function handler(req, res) {
 
     if (rideError) throw rideError;
 
-    // Send push notification to admin (optional - won't break if fails)
-    try {
-      await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://travel-admin.vercel.app'}/api/send-notification`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: 'admin',
-          title: '🚕 New Ride Booking',
-          body: `${name} booked a ${vehicle} from ${pickup.substring(0, 30)}`,
-          data: { rideId: ride.id, type: 'new_ride' }
-        }),
-      });
-    } catch (notifyError) {
-      console.error('Notification error (non-critical):', notifyError.message);
-      // Don't track this as it's non-critical
-    }
-
-    // Send email confirmation (optional - won't break if fails)
-    try {
-      await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://travel-admin.vercel.app'}/api/send-email`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: phone,
-          subject: 'Booking Confirmation - Maa Saraswati Travels',
-          type: 'booking_confirmation',
-          bookingDetails: {
-            bookingId: ride.id,
-            pickup,
-            drop,
-            vehicle,
-            fare,
-            distance,
-            rideOtp
-          }
-        }),
-      });
-    } catch (emailError) {
-      console.error('Email error (non-critical):', emailError.message);
-      // Don't track this as it's non-critical
-    }
-
-    // Track success
-    await trackAPI('/api/book', Date.now() - startTime, 200);
+    // Send ride request to nearby drivers
+    const requestResult = await createRideRequest(ride.id, vehicleType, pickupLat, pickupLng);
     
-    // Return success response
     res.status(200).json({
       success: true,
       bookingId: ride.id,
-      message: 'Booking created successfully',
-      requiresOtp: true
+      fare: fare,
+      otp: rideOtp,
+      driversNotified: requestResult.driversNotified || 0,
+      message: requestResult.message || 'Booking created, finding drivers...',
     });
     
   } catch (error) {
     console.error('Booking API error:', error);
-    
-    // Track error
-    await trackAPI('/api/book', Date.now() - startTime, 500);
-    
-    res.status(500).json({ 
-      error: error.message || 'Failed to create booking',
-      success: false 
-    });
+    res.status(500).json({ error: error.message || 'Failed to create booking' });
   }
 }

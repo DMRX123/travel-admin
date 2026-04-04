@@ -3,46 +3,69 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --bg-primary: 249 250 251;
+    --bg-secondary: 255 255 255;
+    --text-primary: 17 24 39;
+    --text-secondary: 75 85 99;
+    --border: 229 231 235;
+  }
+
+  .dark {
+    --bg-primary: 15 23 42;
+    --bg-secondary: 30 41 59;
+    --text-primary: 241 245 249;
+    --text-secondary: 148 163 184;
+    --border: 51 65 85;
+  }
+
   body {
-    background-color: rgb(249 250 251);
-    font-family: 'Inter', system-ui, sans-serif;
+    background-color: rgb(var(--bg-primary));
+    color: rgb(var(--text-primary));
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 }
 
 @layer components {
+  .card {
+    background-color: rgb(var(--bg-secondary));
+    border: 1px solid rgb(var(--border));
+    border-radius: 1rem;
+    transition: all 0.3s ease;
+  }
+  
   .btn-primary {
-    background-color: rgb(249 115 22);
+    background: linear-gradient(135deg, rgb(249 115 22), rgb(239 68 68));
     color: white;
     font-weight: 600;
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    transition-property: background-color;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 150ms;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    transition: all 0.2s ease;
   }
+  
   .btn-primary:hover {
-    background-color: rgb(234 88 12);
+    transform: scale(1.02);
+    box-shadow: 0 10px 25px -5px rgba(249, 115, 22, 0.3);
+  }
+  
+  .btn-primary:disabled {
+    opacity: 0.5;
+    transform: none;
   }
   
   .btn-secondary {
-    background-color: rgb(229 231 235);
-    color: rgb(31 41 55);
-    font-weight: 600;
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    transition-property: background-color;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 150ms;
-  }
-  .btn-secondary:hover {
-    background-color: rgb(209 213 219);
+    background-color: rgb(var(--bg-secondary));
+    border: 1px solid rgb(var(--border));
+    color: rgb(var(--text-primary));
+    font-weight: 500;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    transition: all 0.2s ease;
   }
   
-  .card {
-    background-color: white;
-    border-radius: 0.5rem;
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    padding: 1.5rem;
+  .btn-secondary:hover {
+    background-color: rgb(var(--border));
   }
 }
 
@@ -57,6 +80,79 @@
   }
 }
 
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
 .animate-slide-up {
   animation: slide-up 0.3s ease-out;
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgb(var(--border));
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(249 115 22);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(234 88 12);
+}
+
+/* Map Container */
+.map-container {
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  h1 {
+    font-size: 1.875rem;
+  }
+  
+  .btn-primary, .btn-secondary {
+    padding: 0.5rem 1rem;
+  }
+}
+
+/* Loading Spinner */
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(249, 115, 22, 0.3);
+  border-top-color: rgb(249 115 22);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

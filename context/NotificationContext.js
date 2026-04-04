@@ -1,3 +1,4 @@
+// context/NotificationContext.js
 import { createContext, useContext, useState, useEffect } from 'react';
 
 const NotificationContext = createContext();
@@ -8,7 +9,11 @@ export function NotificationProvider({ children }) {
   useEffect(() => {
     const saved = localStorage.getItem('notifications');
     if (saved) {
-      setNotifications(JSON.parse(saved));
+      try {
+        setNotifications(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to parse notifications:', e);
+      }
     }
   }, []);
 
@@ -18,10 +23,10 @@ export function NotificationProvider({ children }) {
 
   const addNotification = (notification) => {
     const newNotification = {
-      ...notification,
       id: Date.now().toString(),
       read: false,
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
+      ...notification,
     };
     const updated = [newNotification, ...notifications];
     setNotifications(updated);

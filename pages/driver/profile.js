@@ -4,9 +4,11 @@ import { supabase } from '../../lib/supabase';
 import Head from 'next/head';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function DriverProfile() {
   const router = useRouter();
+  const { theme } = useTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState({
@@ -88,6 +90,7 @@ export default function DriverProfile() {
       .update({
         full_name: profile.full_name,
         phone: profile.phone,
+        updated_at: new Date().toISOString(),
       })
       .eq('id', session.user.id);
 
@@ -108,6 +111,7 @@ export default function DriverProfile() {
         vehicle_color: driver.vehicle_color,
         seating_capacity: driver.seating_capacity,
         ac_available: driver.ac_available,
+        updated_at: new Date().toISOString(),
       })
       .eq('id', session.user.id);
 
@@ -121,18 +125,19 @@ export default function DriverProfile() {
   };
 
   const vehicleTypes = [
-    { value: 'auto', label: 'Auto Rickshaw', seats: 3, icon: '🛺' },
-    { value: 'sedan', label: 'Sedan', seats: 4, icon: '🚗' },
-    { value: 'suv', label: 'SUV', seats: 6, icon: '🚙' },
-    { value: 'luxury', label: 'Luxury', seats: 4, icon: '🚘' },
-    { value: 'tempo', label: 'Tempo Traveller', seats: 12, icon: '🚐' },
+    { value: 'bike', label: 'Bike', seats: 1, icon: '🏍️', rate: '₹8/km' },
+    { value: 'auto', label: 'Auto Rickshaw', seats: 3, icon: '🛺', rate: '₹12/km' },
+    { value: 'sedan', label: 'Sedan', seats: 4, icon: '🚗', rate: '₹15/km' },
+    { value: 'suv', label: 'SUV', seats: 6, icon: '🚙', rate: '₹20/km' },
+    { value: 'luxury', label: 'Luxury', seats: 4, icon: '🚘', rate: '₹30/km' },
+    { value: 'tempo', label: 'Tempo Traveller', seats: 12, icon: '🚐', rate: '₹25/km' },
   ];
 
   const currentVehicle = vehicleTypes.find(v => v.value === driver.vehicle_type);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className={`min-h-screen flex items-center justify-center ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-100'}`}>
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
       </div>
     );
@@ -144,11 +149,11 @@ export default function DriverProfile() {
         <title>My Profile | Driver Dashboard | Maa Saraswati Travels</title>
       </Head>
 
-      <div className="min-h-screen bg-gray-100">
-        <header className="bg-white shadow-md sticky top-0 z-50">
+      <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-100'}`}>
+        <header className={`shadow-md sticky top-0 z-50 ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'}`}>
           <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-            <Link href="/driver/dashboard" className="text-2xl hover:text-orange-500">←</Link>
-            <h1 className="text-xl font-bold text-gray-800">My Profile</h1>
+            <Link href="/driver/dashboard" className={`text-2xl hover:text-orange-500 ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>←</Link>
+            <h1 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>My Profile</h1>
           </div>
         </header>
 
@@ -172,46 +177,46 @@ export default function DriverProfile() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow p-6 space-y-6">
+          <div className={`rounded-xl shadow p-6 space-y-6 ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'}`}>
             <div>
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">Personal Information</h2>
+              <h2 className={`text-lg font-semibold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>Personal Information</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                  <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Full Name</label>
                   <input
                     type="text"
                     value={profile.full_name}
                     onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Email</label>
                   <input
                     type="email"
                     value={profile.email}
                     disabled
-                    className="w-full px-4 py-2 border rounded-lg bg-gray-50"
+                    className={`w-full px-4 py-2 border rounded-lg ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-gray-400' : 'bg-gray-100 border-gray-300 text-gray-500'}`}
                   />
-                  <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+                  <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>Email cannot be changed</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                  <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Phone Number</label>
                   <input
                     type="tel"
                     value={profile.phone}
                     onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
                   />
                 </div>
               </div>
             </div>
 
-            <div className="border-t pt-6">
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">Vehicle Information</h2>
+            <div className="border-t pt-6 dark:border-gray-700">
+              <h2 className={`text-lg font-semibold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>Vehicle Information</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Type</label>
+                  <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Vehicle Type</label>
                   <select
                     value={driver.vehicle_type}
                     onChange={(e) => {
@@ -222,52 +227,52 @@ export default function DriverProfile() {
                         seating_capacity: selected?.seats || 4
                       });
                     }}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
                   >
                     <option value="">Select Vehicle Type</option>
                     {vehicleTypes.map(v => (
-                      <option key={v.value} value={v.value}>{v.icon} {v.label} ({v.seats} seats)</option>
+                      <option key={v.value} value={v.value}>{v.icon} {v.label} ({v.seats} seats) - {v.rate}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Model</label>
+                  <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Vehicle Model</label>
                   <input
                     type="text"
                     placeholder="e.g., Toyota Innova, Maruti Suzuki Swift"
                     value={driver.vehicle_model}
                     onChange={(e) => setDriver({ ...driver, vehicle_model: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Number</label>
+                  <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Vehicle Number</label>
                   <input
                     type="text"
                     placeholder="e.g., MP09 AB 1234"
                     value={driver.vehicle_number}
                     onChange={(e) => setDriver({ ...driver, vehicle_number: e.target.value.toUpperCase() })}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 uppercase ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Color</label>
+                  <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Vehicle Color</label>
                   <input
                     type="text"
                     placeholder="e.g., White, Black, Silver"
                     value={driver.vehicle_color}
                     onChange={(e) => setDriver({ ...driver, vehicle_color: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">License Number</label>
+                  <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>License Number</label>
                   <input
                     type="text"
                     placeholder="e.g., DL-1234567890"
                     value={driver.license_number}
                     onChange={(e) => setDriver({ ...driver, license_number: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
                   />
                 </div>
                 <div className="flex items-center gap-3">
@@ -278,7 +283,7 @@ export default function DriverProfile() {
                     onChange={(e) => setDriver({ ...driver, ac_available: e.target.checked })}
                     className="w-4 h-4 text-orange-500 rounded focus:ring-orange-500"
                   />
-                  <label htmlFor="ac_available" className="text-sm text-gray-700">AC Available</label>
+                  <label htmlFor="ac_available" className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>AC Available</label>
                 </div>
               </div>
             </div>

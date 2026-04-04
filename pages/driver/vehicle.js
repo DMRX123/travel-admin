@@ -4,9 +4,11 @@ import { supabase } from '../../lib/supabase';
 import Head from 'next/head';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function DriverVehicle() {
   const router = useRouter();
+  const { theme } = useTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [vehicle, setVehicle] = useState({
@@ -18,6 +20,7 @@ export default function DriverVehicle() {
     seating_capacity: 4,
     ac_available: true,
   });
+  const [uploading, setUploading] = useState(false);
   const [documents, setDocuments] = useState({
     rc_book: null,
     insurance: null,
@@ -88,6 +91,7 @@ export default function DriverVehicle() {
         vehicle_color: vehicle.vehicle_color,
         seating_capacity: vehicle.seating_capacity,
         ac_available: vehicle.ac_available,
+        updated_at: new Date().toISOString(),
       })
       .eq('id', session.user.id);
 
@@ -102,7 +106,8 @@ export default function DriverVehicle() {
   };
 
   const vehicleTypes = [
-    { value: 'auto', label: 'Auto Rickshaw', seats: 3, icon: '🛺', rate: '₹10/km' },
+    { value: 'bike', label: 'Bike', seats: 1, icon: '🏍️', rate: '₹8/km' },
+    { value: 'auto', label: 'Auto Rickshaw', seats: 3, icon: '🛺', rate: '₹12/km' },
     { value: 'sedan', label: 'Sedan', seats: 4, icon: '🚗', rate: '₹15/km' },
     { value: 'suv', label: 'SUV', seats: 6, icon: '🚙', rate: '₹20/km' },
     { value: 'luxury', label: 'Luxury', seats: 4, icon: '🚘', rate: '₹30/km' },
@@ -113,7 +118,7 @@ export default function DriverVehicle() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className={`min-h-screen flex items-center justify-center ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-100'}`}>
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
       </div>
     );
@@ -125,26 +130,26 @@ export default function DriverVehicle() {
         <title>Vehicle Details | Driver Dashboard | Maa Saraswati Travels</title>
       </Head>
 
-      <div className="min-h-screen bg-gray-100">
-        <header className="bg-white shadow-md sticky top-0 z-50">
+      <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-100'}`}>
+        <header className={`shadow-md sticky top-0 z-50 ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'}`}>
           <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-            <Link href="/driver/dashboard" className="text-2xl hover:text-orange-500">←</Link>
-            <h1 className="text-xl font-bold text-gray-800">Vehicle Details</h1>
+            <Link href="/driver/dashboard" className={`text-2xl hover:text-orange-500 ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>←</Link>
+            <h1 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>Vehicle Details</h1>
           </div>
         </header>
 
         <div className="container mx-auto px-4 py-8 max-w-2xl">
-          <div className="bg-white rounded-xl shadow p-6">
+          <div className={`rounded-xl shadow p-6 ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'}`}>
             <div className="text-center mb-6">
               <div className="text-7xl mb-3">
                 {currentVehicle?.icon || '🚙'}
               </div>
-              <h2 className="text-xl font-bold text-gray-800">
+              <h2 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>
                 {vehicle.vehicle_model || 'Vehicle Not Added'}
               </h2>
-              <p className="text-gray-500">{vehicle.vehicle_number || 'No number added'}</p>
+              <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>{vehicle.vehicle_number || 'No number added'}</p>
               {currentVehicle && (
-                <div className="mt-2 inline-block bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm">
+                <div className="mt-2 inline-block bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 px-3 py-1 rounded-full text-sm">
                   {currentVehicle.label} • {currentVehicle.rate}
                 </div>
               )}
@@ -152,7 +157,7 @@ export default function DriverVehicle() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Type *</label>
+                <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Vehicle Type *</label>
                 <select
                   value={vehicle.vehicle_type}
                   onChange={(e) => {
@@ -163,7 +168,7 @@ export default function DriverVehicle() {
                       seating_capacity: selected?.seats || 4
                     });
                   }}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
                 >
                   <option value="">Select Vehicle Type</option>
                   {vehicleTypes.map(v => (
@@ -173,58 +178,58 @@ export default function DriverVehicle() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Model</label>
+                <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Vehicle Model</label>
                 <input
                   type="text"
                   placeholder="e.g., Toyota Innova, Maruti Suzuki Swift"
                   value={vehicle.vehicle_model}
                   onChange={(e) => setVehicle({ ...vehicle, vehicle_model: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Number *</label>
+                <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Vehicle Number *</label>
                 <input
                   type="text"
                   placeholder="e.g., MP09 AB 1234"
                   value={vehicle.vehicle_number}
                   onChange={(e) => setVehicle({ ...vehicle, vehicle_number: e.target.value.toUpperCase() })}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 uppercase"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 uppercase ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Color</label>
+                <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Vehicle Color</label>
                 <input
                   type="text"
                   placeholder="e.g., White, Black, Silver"
                   value={vehicle.vehicle_color}
                   onChange={(e) => setVehicle({ ...vehicle, vehicle_color: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Seating Capacity</label>
+                <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Seating Capacity</label>
                 <input
                   type="number"
                   min="1"
                   max="20"
                   value={vehicle.seating_capacity}
                   onChange={(e) => setVehicle({ ...vehicle, seating_capacity: parseInt(e.target.value) })}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">License Number *</label>
+                <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>License Number *</label>
                 <input
                   type="text"
                   placeholder="e.g., DL-1234567890"
                   value={vehicle.license_number}
                   onChange={(e) => setVehicle({ ...vehicle, license_number: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
                 />
               </div>
 
@@ -236,12 +241,12 @@ export default function DriverVehicle() {
                   onChange={(e) => setVehicle({ ...vehicle, ac_available: e.target.checked })}
                   className="w-4 h-4 text-orange-500 rounded focus:ring-orange-500"
                 />
-                <label htmlFor="ac_available" className="text-sm text-gray-700">AC Available</label>
+                <label htmlFor="ac_available" className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>AC Available</label>
               </div>
             </div>
 
-            <div className="mt-8 p-4 bg-amber-50 rounded-lg">
-              <p className="text-sm text-amber-800 flex items-start gap-2">
+            <div className="mt-8 p-4 bg-amber-50 dark:bg-amber-900/30 rounded-lg">
+              <p className="text-sm text-amber-800 dark:text-amber-400 flex items-start gap-2">
                 <span>⚠️</span>
                 <span>Please ensure all details are correct. This information will be verified by admin before approval.</span>
               </p>
