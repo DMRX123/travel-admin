@@ -15,7 +15,7 @@ User-agent: *
 Disallow: /api
 
 # Host
-Host: https://maasaraswatitravels.com
+Host: https://travel-admin.vercel.app
 
 # Sitemaps
-Sitemap: https://maasaraswatitravels.com/sitemap.xml
+Sitemap: https://travel-admin.vercel.app/sitemap.xml

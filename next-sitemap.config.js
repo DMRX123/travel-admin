@@ -1,5 +1,6 @@
+// next-sitemap.config.js
 module.exports = {
-  siteUrl: 'https://maasaraswatitravels.com',
+  siteUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://travel-admin.vercel.app',
   generateRobotsTxt: true,
   robotsTxtOptions: {
     policies: [
@@ -11,12 +12,4 @@ module.exports = {
   },
   exclude: ['/dashboard/*', '/login', '/api/*'],
   outDir: './public',
-  transform: async (config, path) => {
-    return {
-      loc: path,
-      changefreq: path === '/' ? 'daily' : 'weekly',
-      priority: path === '/' ? 1.0 : 0.7,
-      lastmod: new Date().toISOString(),
-    };
-  },
-};
+}
