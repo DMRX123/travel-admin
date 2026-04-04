@@ -1,6 +1,12 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 
+// ============================================
+// HARDCODE SUPABASE VALUES FOR MIDDLEWARE
+// ============================================
+const SUPABASE_URL = 'https://xeymfzwxjurwbezgwdef.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_hugKMF1Hkj3WkC7GoAD3gA_vhCYVqbj';
+
 // Rate limiting configuration (in-memory store for demo, use Redis in production)
 const rateLimitStore = new Map();
 
@@ -74,9 +80,10 @@ export async function middleware(req) {
     );
   }
 
+  // Use hardcoded values instead of process.env
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY,
     {
       cookies: {
         getAll() {
@@ -91,7 +98,15 @@ export async function middleware(req) {
     }
   );
 
-  const { data: { session } } = await supabase.auth.getSession();
+  // Wrap in try-catch to prevent middleware from crashing
+  let session = null;
+  try {
+    const { data } = await supabase.auth.getSession();
+    session = data.session;
+  } catch (error) {
+    console.error('Middleware auth error:', error);
+    // Continue without session - will redirect to login
+  }
 
   const publicPaths = ['/', '/login', '/book', '/about', '/contact', '/terms', '/privacy', '/tour', '/route'];
   const isPublicPath = publicPaths.some(
@@ -144,28 +159,38 @@ export async function middleware(req) {
 
   // ✅ For admin paths, verify admin user type
   if (isAdminPath && session) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('user_type')
-      .eq('id', session.user.id)
-      .single();
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('user_type')
+        .eq('id', session.user.id)
+        .single();
 
-    if (profile?.user_type !== 'admin') {
-      await supabase.auth.signOut();
+      if (profile?.user_type !== 'admin') {
+        await supabase.auth.signOut();
+        return NextResponse.redirect(new URL('/login', req.url));
+      }
+    } catch (error) {
+      console.error('Admin verification error:', error);
       return NextResponse.redirect(new URL('/login', req.url));
     }
   }
 
   // ✅ For driver paths, verify driver user type
   if (isDriverPath && session) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('user_type')
-      .eq('id', session.user.id)
-      .single();
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('user_type')
+        .eq('id', session.user.id)
+        .single();
 
-    if (profile?.user_type !== 'driver') {
-      await supabase.auth.signOut();
+      if (profile?.user_type !== 'driver') {
+        await supabase.auth.signOut();
+        return NextResponse.redirect(new URL('/driver/login', req.url));
+      }
+    } catch (error) {
+      console.error('Driver verification error:', error);
       return NextResponse.redirect(new URL('/driver/login', req.url));
     }
   }
