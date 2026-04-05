@@ -1,4 +1,4 @@
-// pages/driver/register.js - NEW FILE
+// pages/driver/register.js
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../../lib/supabase';
@@ -32,7 +32,6 @@ export default function DriverRegister() {
     e.preventDefault();
     setLoading(true);
 
-    // Validation
     if (formData.password !== formData.confirmPassword) {
       toast.error('Passwords do not match');
       setLoading(false);
@@ -52,7 +51,6 @@ export default function DriverRegister() {
     }
 
     try {
-      // Create auth user
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -70,7 +68,6 @@ export default function DriverRegister() {
         throw new Error('Registration failed');
       }
 
-      // Create profile
       const { error: profileError } = await supabase
         .from('profiles')
         .insert({
@@ -79,13 +76,13 @@ export default function DriverRegister() {
           email: formData.email,
           phone: formData.phone,
           user_type: 'driver',
-          is_verified: true,
+          is_verified: false,
           is_active: true,
+          created_at: new Date().toISOString(),
         });
 
       if (profileError) throw profileError;
 
-      // Create driver record
       const { error: driverError } = await supabase
         .from('drivers')
         .insert({
@@ -97,6 +94,10 @@ export default function DriverRegister() {
           is_approved: false,
           verification_status: 'pending',
           is_online: false,
+          rating: 5.0,
+          total_trips: 0,
+          earnings: 0,
+          created_at: new Date().toISOString(),
         });
 
       if (driverError) throw driverError;
@@ -117,7 +118,8 @@ export default function DriverRegister() {
   const vehicleTypes = [
     { value: 'bike', label: 'Bike', icon: '🏍️' },
     { value: 'auto', label: 'Auto Rickshaw', icon: '🛺' },
-    { value: 'car', label: 'Car', icon: '🚗' },
+    { value: 'sedan', label: 'Sedan', icon: '🚗' },
+    { value: 'suv', label: 'SUV', icon: '🚙' },
   ];
 
   return (
@@ -150,7 +152,6 @@ export default function DriverRegister() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Personal Information */}
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
