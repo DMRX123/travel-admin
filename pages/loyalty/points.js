@@ -1,6 +1,5 @@
 // pages/api/loyalty/points.js
-import { supabaseAdmin, addLoyaltyPoints, getLoyaltyPoints } from '../../../lib/supabase';
-
+import { supabaseAdmin, getLoyaltyPoints, addLoyaltyPoints } from '../../lib/supabase';
 export default async function handler(req, res) {
   if (req.method === 'GET') {
     const { userId } = req.query;

@@ -1,5 +1,5 @@
 // pages/api/loyalty/redeem.js
-import { supabaseAdmin, getLoyaltyPoints } from '../../../lib/supabase';
+import { supabaseAdmin, getLoyaltyPoints } from '../../lib/supabase';
 
 const REWARDS = [
   { id: 1, name: '₹50 OFF', points: 500, discount: 50 },

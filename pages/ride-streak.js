@@ -1,5 +1,5 @@
 // pages/api/ride-streak.js
-import { supabaseAdmin, updateRideStreak } from '../../lib/supabase';
+import { supabaseAdmin, updateRideStreak } from '../lib/supabase';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {

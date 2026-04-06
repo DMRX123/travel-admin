@@ -1,5 +1,5 @@
 // pages/api/route-deviation.js
-import { supabaseAdmin } from '../../lib/supabase';
+import { supabaseAdmin } from '../lib/supabase';
 
 const DEVIATION_THRESHOLD_METERS = 500;
 
