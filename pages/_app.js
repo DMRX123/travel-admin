@@ -1,4 +1,4 @@
-// pages/_app.js - FIXED VERSION
+// pages/_app.js - COMPLETE WORKING VERSION
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
@@ -16,10 +16,12 @@ import '../styles/dark.css';
 function MyApp({ Component, pageProps }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   // Initialize monitoring
   useEffect(() => {
     initMonitoring();
+    setMounted(true);
   }, []);
 
   // Google Analytics
@@ -56,7 +58,8 @@ function MyApp({ Component, pageProps }) {
     checkSession();
   }, []);
 
-  if (loading) {
+  // Prevent hydration mismatch
+  if (!mounted || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-500 to-red-600">
         <div className="text-center">
