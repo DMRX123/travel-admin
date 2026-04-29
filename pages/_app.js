@@ -1,4 +1,4 @@
-// pages/_app.js - OPTIMIZED PRODUCTION READY
+// pages/_app.js - FIXED VERSION
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
@@ -12,7 +12,6 @@ import { ThemeProvider } from '../context/ThemeContext';
 import ErrorBoundary from '../components/ErrorBoundary';
 import '../styles/globals.css';
 import '../styles/dark.css';
-import { preloadCache } from '../lib/cache';
 
 function MyApp({ Component, pageProps }) {
   const router = useRouter();
@@ -33,10 +32,6 @@ function MyApp({ Component, pageProps }) {
       router.events.off('routeChangeComplete', handleRouteChange);
     };
   }, [router.events]);
-useEffect(() => {
-  // Preload common data for better performance
-  preloadCache().catch(console.error);
-}, []);
 
   // Service Worker for PWA
   useEffect(() => {

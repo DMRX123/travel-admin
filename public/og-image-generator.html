@@ -1,16 +1,134 @@
-<!-- public/og-image-generator.html -->
 <!DOCTYPE html>
-<html>
-<head><title>OG Image Generator</title></head>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OG Image Generator - Maa Saraswati Travels</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #F97316;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+        .preview {
+            background: linear-gradient(135deg, #F97316, #EF4444);
+            width: 100%;
+            height: 300px;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            margin: 30px 0;
+            text-align: center;
+            padding: 20px;
+        }
+        .preview-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+        .preview-title {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .preview-subtitle {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+        .instructions {
+            background: #f0f0f0;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+        .instructions h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .instructions ul {
+            margin-left: 20px;
+            color: #666;
+        }
+        .instructions li {
+            margin: 8px 0;
+        }
+        .btn {
+            display: inline-block;
+            background: #F97316;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            margin: 10px;
+            transition: transform 0.2s;
+        }
+        .btn:hover {
+            transform: scale(1.05);
+        }
+        .size-info {
+            font-family: monospace;
+            background: #e0e0e0;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+    </style>
+</head>
 <body>
-<h1>OG Image for Maa Saraswati Travels</h1>
-<p>Create a 1200x630px image with:</p>
-<ul>
-  <li>Background: Orange gradient (#F97316 to #EF4444)</li>
-  <li>Text: "Maa Saraswati Travels"</li>
-  <li>Subtext: "Best Taxi Service in India"</li>
-  <li>Icon: Taxi/auto icon</li>
-</ul>
-<p>Use: <a href="https://www.canva.com/" target="_blank">Canva</a> or <a href="https://www.figma.com/" target="_blank">Figma</a></p>
+    <div class="container">
+        <h1>🎨 OG Image Generator</h1>
+        <p>Create Open Graph image for social media sharing (1200x630px)</p>
+        
+        <div class="preview">
+            <div class="preview-icon">🚐</div>
+            <div class="preview-title">Maa Saraswati Travels</div>
+            <div class="preview-subtitle">Best Taxi Service in India</div>
+        </div>
+        
+        <div class="instructions">
+            <h3>📋 Instructions:</h3>
+            <ul>
+                <li>Create an image with dimensions: <strong class="size-info">1200 x 630 pixels</strong></li>
+                <li>Background: <strong>Orange gradient (#F97316 to #EF4444)</strong></li>
+                <li>Main Text: <strong>"Maa Saraswati Travels"</strong> in white, bold font</li>
+                <li>Subtext: <strong>"Best Taxi Service in India"</strong></li>
+                <li>Icon: Use a taxi/auto/car icon (🚐, 🚗, 🛺, 🚕)</li>
+                <li>File name: Save as <strong>og-image.jpg</strong> in public folder</li>
+            </ul>
+        </div>
+        
+        <div style="text-align: center;">
+            <a href="https://www.canva.com/" target="_blank" rel="noopener noreferrer" class="btn">🎨 Create with Canva</a>
+            <a href="https://www.figma.com/" target="_blank" rel="noopener noreferrer" class="btn">🎨 Create with Figma</a>
+            <a href="https://www.photopea.com/" target="_blank" rel="noopener noreferrer" class="btn">🎨 Create with Photopea</a>
+        </div>
+        
+        <p style="text-align: center; margin-top: 20px; font-size: 12px; color: #888;">
+            After creating, save as <strong>public/og-image.jpg</strong>
+        </p>
+    </div>
 </body>
 </html>
