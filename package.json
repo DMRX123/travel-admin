@@ -1,7 +1,10 @@
 {
   "name": "maa-saraswati-travels",
-  "version": "3.0.0",
+  "version": "5.0.0",
   "private": true,
+  "description": "Complete taxi booking platform for Maa Saraswati Travels",
+  "author": "Maa Saraswati Travels",
+  "license": "UNLICENSED",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -12,7 +15,11 @@
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch --passWithNoTests",
     "test:coverage": "jest --coverage --passWithNoTests",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf .next node_modules package-lock.json",
+    "fresh": "npm run clean && npm install && npm run build",
+    "create-admin": "node scripts/create-admin.js",
+    "create-driver": "node scripts/create-demo-driver.js"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.9",
@@ -26,7 +33,8 @@
     "firebase": "^10.7.2",
     "firebase-admin": "^13.7.0",
     "framer-motion": "^10.18.0",
-    "next": "14.0.4",
+    "ioredis": "^5.10.1",
+    "next": "14.2.25",
     "next-sitemap": "^4.2.3",
     "nodemailer": "^6.9.7",
     "react": "^18.2.0",

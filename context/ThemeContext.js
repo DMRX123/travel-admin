@@ -1,15 +1,16 @@
-// context/ThemeContext.js
+// context/ThemeContext.js - PRODUCTION READY
 import { createContext, useContext, useState, useEffect } from 'react';
 
 const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState('light');
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
     const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
     setTheme(initialTheme);
     applyTheme(initialTheme);
@@ -29,6 +30,11 @@ export function ThemeProvider({ children }) {
     setTheme(newTheme);
     applyTheme(newTheme);
   };
+
+  // Prevent hydration mismatch
+  if (!mounted) {
+    return <>{children}</>;
+  }
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>

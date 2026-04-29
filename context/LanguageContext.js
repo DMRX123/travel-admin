@@ -1,3 +1,4 @@
+// context/LanguageContext.js - PRODUCTION READY
 import { createContext, useContext, useState, useEffect } from 'react';
 
 const LanguageContext = createContext();
@@ -9,6 +10,7 @@ const translations = {
   about: { en: 'About Us', hi: 'हमारे बारे में' },
   contact: { en: 'Contact', hi: 'संपर्क करें' },
   support: { en: 'Support', hi: 'सहायता' },
+  dashboard: { en: 'Dashboard', hi: 'डैशबोर्ड' },
   
   // Booking
   pickupLocation: { en: 'Pickup Location', hi: 'पिकअप स्थान' },
@@ -24,6 +26,7 @@ const translations = {
   sedan: { en: 'Sedan', hi: 'सेडान' },
   suv: { en: 'SUV', hi: 'एसयूवी' },
   luxury: { en: 'Luxury', hi: 'लग्जरी' },
+  tempo: { en: 'Tempo', hi: 'टेंपो' },
   
   // Ride Status
   lookingForDriver: { en: 'Looking for a driver near you...', hi: 'आपके पास ड्राइवर ढूंढ रहे हैं...' },
@@ -58,8 +61,10 @@ const translations = {
 
 export function LanguageProvider({ children }) {
   const [language, setLanguage] = useState('en');
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const savedLang = localStorage.getItem('language');
     if (savedLang && (savedLang === 'en' || savedLang === 'hi')) {
       setLanguage(savedLang);
@@ -75,6 +80,10 @@ export function LanguageProvider({ children }) {
   const t = (key) => {
     return translations[key]?.[language] || key;
   };
+
+  if (!mounted) {
+    return <>{children}</>;
+  }
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage: setLanguageWithStorage, t }}>

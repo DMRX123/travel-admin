@@ -1,6 +1,8 @@
+// pages/api/ride-request.js - FINAL WITH TIMEOUT HANDLING
 import { supabaseAdmin, driverAcceptRide, driverRejectRide } from '../../lib/supabase';
+import { withRateLimit } from '../../lib/rate-limit';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -12,6 +14,32 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Check if ride request is still valid (not timed out)
+    const { data: request, error: requestError } = await supabaseAdmin
+      .from('ride_requests')
+      .select('status, timeout_at')
+      .eq('ride_id', rideId)
+      .eq('driver_id', driverId)
+      .single();
+
+    if (requestError && requestError.code !== 'PGRST116') {
+      throw requestError;
+    }
+
+    if (request && new Date(request.timeout_at) < new Date()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Ride request has expired. Another driver may have accepted it.' 
+      });
+    }
+
+    if (request && request.status !== 'pending') {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Ride request already ${request.status}` 
+      });
+    }
+
     if (action === 'accept') {
       const result = await driverAcceptRide(rideId, driverId);
       return res.status(200).json(result);
@@ -28,3 +56,5 @@ export default async function handler(req, res) {
     res.status(500).json({ error: error.message });
   }
 }
+
+export default withRateLimit(handler, { limit: 10, windowMs: 60000 });

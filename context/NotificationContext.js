@@ -1,25 +1,31 @@
-// context/NotificationContext.js
+// context/NotificationContext.js - COMPLETE PRODUCTION READY
 import { createContext, useContext, useState, useEffect } from 'react';
 
 const NotificationContext = createContext();
 
+const STORAGE_KEY = 'app_notifications';
+
 export function NotificationProvider({ children }) {
   const [notifications, setNotifications] = useState([]);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem('notifications');
-    if (saved) {
-      try {
+    setMounted(true);
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
         setNotifications(JSON.parse(saved));
-      } catch (e) {
-        console.error('Failed to parse notifications:', e);
       }
+    } catch (e) {
+      console.error('Failed to parse notifications:', e);
     }
   }, []);
 
-  const saveToLocal = (updated) => {
-    localStorage.setItem('notifications', JSON.stringify(updated));
-  };
+  useEffect(() => {
+    if (mounted) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications));
+    }
+  }, [notifications, mounted]);
 
   const addNotification = (notification) => {
     const newNotification = {
@@ -28,29 +34,26 @@ export function NotificationProvider({ children }) {
       timestamp: new Date().toISOString(),
       ...notification,
     };
-    const updated = [newNotification, ...notifications];
-    setNotifications(updated);
-    saveToLocal(updated);
+    setNotifications(prev => [newNotification, ...prev]);
   };
 
   const markAsRead = (id) => {
-    const updated = notifications.map(n => n.id === id ? { ...n, read: true } : n);
-    setNotifications(updated);
-    saveToLocal(updated);
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
   };
 
   const markAllAsRead = () => {
-    const updated = notifications.map(n => ({ ...n, read: true }));
-    setNotifications(updated);
-    saveToLocal(updated);
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
   const clearAll = () => {
     setNotifications([]);
-    saveToLocal([]);
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  if (!mounted) {
+    return <>{children}</>;
+  }
 
   return (
     <NotificationContext.Provider value={{
