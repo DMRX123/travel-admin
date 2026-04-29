@@ -1,7 +1,7 @@
-// pages/api/speed-alert.js - PRODUCTION READY
-import { supabaseAdmin } from '../../../lib/supabase';
+// pages/api/speed-alert.js
+import { supabaseAdmin } from '../../lib/supabase';
 
-const SPEED_LIMIT = 80; // km/h
+const SPEED_LIMIT = 80;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -18,7 +18,6 @@ export default async function handler(req, res) {
 
   if (isOverSpeeding) {
     try {
-      // Log speed alert
       await supabaseAdmin.from('speed_alerts').insert({
         ride_id: rideId,
         driver_id: driverId,
@@ -29,7 +28,6 @@ export default async function handler(req, res) {
         created_at: new Date().toISOString(),
       });
 
-      // Get user for this ride
       const { data: ride } = await supabaseAdmin
         .from('rides')
         .select('user_id')
